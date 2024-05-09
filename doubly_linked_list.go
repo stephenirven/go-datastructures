@@ -7,21 +7,20 @@ type DoublyLinkedList[val comparable] struct {
 	size  int
 	first *DoublyLinkedListNode[val]
 	last  *DoublyLinkedListNode[val]
-	mutex *sync.RWMutex
+	mutex sync.RWMutex
 }
 
 type DoublyLinkedListNode[val comparable] struct {
 	value val
 	next  *DoublyLinkedListNode[val]
 	prev  *DoublyLinkedListNode[val]
-	mutex *sync.RWMutex
+	mutex sync.RWMutex
 }
 
 // constructor
 func NewDoublyLinkedListNode[val comparable](v val) *DoublyLinkedListNode[val] {
 	n := DoublyLinkedListNode[val]{
 		value: v,
-		mutex: &sync.RWMutex{},
 	}
 
 	return &n
@@ -41,7 +40,7 @@ func (n *DoublyLinkedListNode[val]) SetValue(v val) {
 
 // constructor
 func NewDoublyLinkedList[val comparable]() *DoublyLinkedList[val] {
-	l := DoublyLinkedList[val]{mutex: &sync.RWMutex{}}
+	l := DoublyLinkedList[val]{}
 	return &l
 }
 
