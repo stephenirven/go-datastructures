@@ -565,6 +565,30 @@ func TestLinkedList(t *testing.T) {
 	}
 }
 
+func TestLinkedListSingleItem(t *testing.T){
+
+	t.Log("Given the need to test Unlink on single item list")
+	{
+		l := NewDoublyLinkedList[int]()
+		l.AddFirst(1)
+
+		l.Unlink(l.first)
+
+		if l.size != 0 {
+			t.Errorf("Expected size of linked list to be 0 : %v", l.size)
+		}
+
+		l.AddFirst(10)
+
+		l.Unlink(l.last)
+
+		if l.size != 0 {
+			t.Errorf("Expected size of linked list to be 0 : %v", l.size)
+		}
+
+	}
+
+}
 func TestLinkedListConcurrent(t *testing.T) {
 	t.Parallel()
 	t.Log("Given the need to test concurrent writes to the list")

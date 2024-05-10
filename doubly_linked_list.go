@@ -336,6 +336,15 @@ func (l *DoublyLinkedList[val]) Unlink(n *DoublyLinkedListNode[val]) {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
+	
+	if l.first == n { // if the node is the first
+		l.first = n.next // set the first to be the next
+	}
+	
+	if l.last == n { // if the node is the last
+		l.last = n.prev // set the last to be the prev
+	}
+
 	if n.next != nil {
 		n.next.mutex.Lock()
 		defer n.next.mutex.Unlock()
@@ -345,15 +354,6 @@ func (l *DoublyLinkedList[val]) Unlink(n *DoublyLinkedListNode[val]) {
 		n.prev.mutex.Lock()
 		defer n.prev.mutex.Unlock()
 		n.prev.next = n.next
-	}
-
-	if l.first == n {
-		l.first = n.next
-		l.first.prev = nil
-	}
-	if l.last == n {
-		l.last = n.prev
-		l.last.next = nil
 	}
 
 	n.next = nil
