@@ -5,7 +5,6 @@ import (
 	"hash/maphash"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"golang.org/x/sync/semaphore"
 )
@@ -40,19 +39,20 @@ func NewMap[key comparable, val comparable](capacity uint64) *Map[key, val] {
 	return &m
 }
 
-// Get the size
+// Returns the number of key-value mappings in this map.
 func (m *Map[key, val]) Size() uint64 {
 	return m.size
 }
 
-// Values for cache entries
+// Structure to store key-value mappings in the map
 type MapEntry[key comparable, val any] struct {
 	key   key
 	value val
 }
 
-// Get the value associated with the supplied key
-// Boolean ok indicates presence of key
+// Returns the value to which the specified key is mapped,
+// or the zero value if not present. Boolean ok indicates
+// whether the value was present
 func (m *Map[key, val]) Get(k key) (value val, ok bool) {
 
 	// read lock on struct
@@ -60,10 +60,7 @@ func (m *Map[key, val]) Get(k key) (value val, ok bool) {
 	defer m.mutex.RUnlock()
 
 	// generate the numeric index within the backing slice
-	var h maphash.Hash
-	h.SetSeed(m.seed)
-	h.Write([]byte(fmt.Sprintf("%v", k)))
-	idx := h.Sum64() % uint64(m.capacity)
+	idx := m.hash(k) % m.capacity
 
 	// read lock the bucket while searching
 	m.buckets[idx].mutex.RLock()
@@ -82,6 +79,7 @@ func (m *Map[key, val]) Get(k key) (value val, ok bool) {
 
 }
 
+// Associates the specified value with the specified key in this map.
 func (m *Map[key, val]) Put(k key, v val) {
 
 	// If we need a resize and one isn't already in progress, set it running
@@ -96,11 +94,7 @@ func (m *Map[key, val]) Put(k key, v val) {
 	defer m.mutex.RUnlock()
 
 	// get the numeric index
-	var h maphash.Hash
-	h.SetSeed(m.seed)
-	f := []byte(fmt.Sprintf("%v", k))
-	h.Write(f)
-	idx := h.Sum64() % m.capacity
+	idx := m.hash(k) % m.capacity
 
 	// Search for the key, starting with the most recently added
 	entry, ok := m.buckets[idx].FindFirstFunc(func(v *MapEntry[key, val]) bool {
@@ -117,9 +111,117 @@ func (m *Map[key, val]) Put(k key, v val) {
 
 }
 
+// Stores all the provided key/value pairs in the map, replacing any
+// keys already present
+func (m *Map[key, val]) PutAll(entries []MapEntry[key, val]) {
+	for e := range entries {
+		m.Put(entries[e].key, entries[e].value)
+	}
+}
+
+// Removes the mapping for the specified key from this map if present.
+func (m *Map[key, val]) Remove(k key) (ok bool) {
+
+	// read lock while we search
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	// get the numeric index
+	idx := m.hash(k) % m.capacity
+
+	// Search for the key, starting with the most recently added
+	entry, ok := m.buckets[idx].FindFirstFunc(func(v *MapEntry[key, val]) bool {
+		return v.key == k
+	})
+	if ok {
+		m.buckets[idx].Unlink(entry)
+		atomic.AddUint64(&m.size, ^uint64(0)) // addition overflow to subtract 1
+		return
+	}
+
+	return
+}
+
+// Removes all of the mappings from this map.
+func (m *Map[key, val]) Clear() {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	m.buckets = make([]DoublyLinkedList[*MapEntry[key, val]], m.capacity)
+	atomic.StoreUint64(&m.size, 0)
+
+	m.size = 0
+
+}
+
+// Returns true if this map contains a mapping for the specified key
+func (m *Map[key, val]) ContainsKey(k key) (ok bool) {
+	// read lock while we search
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	// get the numeric index
+	idx := m.hash(k) % m.capacity
+
+	// Search for the key, starting with the most recently added
+	_, ok = m.buckets[idx].FindFirstFunc(func(v *MapEntry[key, val]) bool {
+		return v.key == k
+	})
+	return
+
+}
+
+// Returns true if this map maps one or more keys to the specified value
+func (m *Map[key, val]) ContainsValue(v val) bool {
+
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	for b := range m.buckets {
+		_, ok := m.buckets[b].FindFirstFunc(
+			func(e *MapEntry[key, val]) bool {
+				return e.value == v
+			})
+		if ok {
+			return true
+		}
+	}
+	return false
+}
+
+// Returns a set of the keys in the map
+func (m *Map[key, val]) KeySet() *Set[key] {
+	s := NewSet[key]()
+
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	for b := range m.buckets {
+		m.buckets[b].Do(
+			func(e *MapEntry[key, val]) {
+				s.Add(e.key)
+			})
+	}
+
+	return s
+}
+
+// Returns a slice of the values in the map
+func (m *Map[key, val]) Values() (values []val) {
+
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	for b := range m.buckets {
+		m.buckets[b].Do(
+			func(e *MapEntry[key, val]) {
+				values = append(values, e.value)
+			})
+	}
+	return
+}
+
+// Used internally to grow the backing array
 func (m *Map[key, val]) grow() {
 	defer m.resize.Release(1) // release the semaphor when done, to allow grow to run again
-	start := time.Now()
 
 	// We need a lock on this to prevent access during resize
 	m.mutex.Lock()
@@ -128,7 +230,6 @@ func (m *Map[key, val]) grow() {
 	if (m.size / m.capacity) < loadFactor {
 		return // drop out if we don't need to resize
 	}
-	fmt.Printf("growing size (%d), capacity (%d), rate (%d)\n", m.size, m.capacity, (m.size / m.capacity))
 
 	newCapacity := newCapacity(m.capacity)
 
@@ -141,19 +242,24 @@ func (m *Map[key, val]) grow() {
 		m.buckets[b].Do(func(e *MapEntry[key, val]) {
 			h.Reset()
 			h.Write([]byte(fmt.Sprintf("%v", e.key)))
-			idx := h.Sum64() % uint64(m.capacity)
+			idx := m.hash(e.key) % newCapacity
 			newBuckets[idx].AddFirst(e)
 		})
 	}
 	m.buckets = newBuckets
 	m.capacity = newCapacity
 
-	elapsed := time.Since(start)
-	fmt.Printf("resize to %d took %d us\n", newCapacity, elapsed.Microseconds())
-
 }
 
-// some magic numbers for plausibly smooth growth
+// Used internally to hash a key to a int index
+func (m *Map[key, val]) hash(k key) uint64 {
+	var h maphash.Hash
+	h.SetSeed(m.seed)
+	h.Write([]byte(fmt.Sprintf("%v", k)))
+	return h.Sum64()
+}
+
+// Used internally to decide (smoothed) growth rate. Figures based on
 // https://go.googlesource.com/go/+/2dda92ff6f9f07eeb110ecbf0fc2d7a0ddd27f9d
 func newCapacity(currentCapacity uint64) uint64 {
 
@@ -170,5 +276,4 @@ func newCapacity(currentCapacity uint64) uint64 {
 		return uint64(1.35 * float64(currentCapacity))
 	}
 	return uint64(1.30 * float64(currentCapacity))
-
 }

@@ -565,7 +565,7 @@ func TestLinkedList(t *testing.T) {
 	}
 }
 
-func TestLinkedListSingleItem(t *testing.T){
+func TestLinkedListSingleItem(t *testing.T) {
 
 	t.Log("Given the need to test Unlink on single item list")
 	{

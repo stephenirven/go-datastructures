@@ -336,11 +336,10 @@ func (l *DoublyLinkedList[val]) Unlink(n *DoublyLinkedListNode[val]) {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
-	
 	if l.first == n { // if the node is the first
 		l.first = n.next // set the first to be the next
 	}
-	
+
 	if l.last == n { // if the node is the last
 		l.last = n.prev // set the last to be the prev
 	}
@@ -484,20 +483,20 @@ func (l *DoublyLinkedList[val]) ReverseSlice() (slice []val) {
 	return
 }
 
-// higher order functions
-
+// Read lock only - TODO add lock version
 func (l *DoublyLinkedList[val]) Do(f func(v val)) {
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
 	for curr := l.first; curr != nil; curr = curr.next {
 		f(curr.value)
 	}
 }
 
+// read lock only
 func (l *DoublyLinkedList[val]) DoReverse(f func(v val)) {
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
 	for curr := l.last; curr != nil; curr = curr.prev {
 		f(curr.value)
