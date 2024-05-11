@@ -14,6 +14,9 @@ import (
 // if the loadfactor is reached and a put is called - regardless
 // of whether it creates a new key
 
+// The seed for the hashing function
+var seed = maphash.MakeSeed()
+
 const loadFactor uint64 = 5 // the limit to the average list length
 
 // Generic hashmap with mutex and growth behaviour
@@ -23,7 +26,6 @@ type Map[key comparable, val comparable] struct {
 	mutex    sync.RWMutex
 	resize   *semaphore.Weighted // Indicates resize in progress
 	size     uint64
-	seed     maphash.Seed
 }
 
 // constructor
@@ -33,7 +35,6 @@ func NewMap[key comparable, val comparable](capacity uint64) *Map[key, val] {
 		buckets:  make([]DoublyLinkedList[*MapEntry[key, val]], capacity),
 		capacity: capacity,
 		resize:   semaphore.NewWeighted(1),
-		seed:     maphash.MakeSeed(),
 	}
 
 	return &m
@@ -60,7 +61,7 @@ func (m *Map[key, val]) Get(k key) (value val, ok bool) {
 	defer m.mutex.RUnlock()
 
 	// generate the numeric index within the backing slice
-	idx := m.hash(k) % m.capacity
+	idx := hash(k) % m.capacity
 
 	// read lock the bucket while searching
 	m.buckets[idx].mutex.RLock()
@@ -94,7 +95,7 @@ func (m *Map[key, val]) Put(k key, v val) {
 	defer m.mutex.RUnlock()
 
 	// get the numeric index
-	idx := m.hash(k) % m.capacity
+	idx := hash(k) % m.capacity
 
 	// Search for the key, starting with the most recently added
 	entry, ok := m.buckets[idx].FindFirstFunc(func(v *MapEntry[key, val]) bool {
@@ -127,7 +128,7 @@ func (m *Map[key, val]) Remove(k key) (ok bool) {
 	defer m.mutex.RUnlock()
 
 	// get the numeric index
-	idx := m.hash(k) % m.capacity
+	idx := hash(k) % m.capacity
 
 	// Search for the key, starting with the most recently added
 	entry, ok := m.buckets[idx].FindFirstFunc(func(v *MapEntry[key, val]) bool {
@@ -160,7 +161,7 @@ func (m *Map[key, val]) ContainsKey(k key) (ok bool) {
 	defer m.mutex.RUnlock()
 
 	// get the numeric index
-	idx := m.hash(k) % m.capacity
+	idx := hash(k) % m.capacity
 
 	// Search for the key, starting with the most recently added
 	_, ok = m.buckets[idx].FindFirstFunc(func(v *MapEntry[key, val]) bool {
@@ -237,12 +238,8 @@ func (m *Map[key, val]) grow() {
 
 	// build a new set of populated buckets
 	for b := range m.buckets {
-		var h maphash.Hash
-		h.SetSeed(m.seed)
 		m.buckets[b].Do(func(e *MapEntry[key, val]) {
-			h.Reset()
-			h.Write([]byte(fmt.Sprintf("%v", e.key)))
-			idx := m.hash(e.key) % newCapacity
+			idx := hash(e.key) % newCapacity
 			newBuckets[idx].AddFirst(e)
 		})
 	}
@@ -252,9 +249,9 @@ func (m *Map[key, val]) grow() {
 }
 
 // Used internally to hash a key to a int index
-func (m *Map[key, val]) hash(k key) uint64 {
+func hash[key comparable](k key) uint64 {
 	var h maphash.Hash
-	h.SetSeed(m.seed)
+	h.SetSeed(seed)
 	h.Write([]byte(fmt.Sprintf("%v", k)))
 	return h.Sum64()
 }
