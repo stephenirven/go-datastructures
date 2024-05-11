@@ -57,14 +57,20 @@ func (l *DoublyLinkedList[val]) Clear() {
 
 // Adds a new value at the start of the list
 func (l *DoublyLinkedList[val]) AddFirst(v val) {
+
+	// Lock the whole list mutex, as we are modifying list.first
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
 	n := NewDoublyLinkedListNode(v)
 	n.next = l.first
 	if l.first != nil {
+
+		// Lock the mutex on the first node, as we are going to
+		// modify its prev value
 		l.first.mutex.Lock()
 		defer l.first.mutex.Unlock()
+
 		l.first.prev = n
 		l.first = n
 		l.size += 1
@@ -80,27 +86,42 @@ func (l *DoublyLinkedList[val]) AddFirst(v val) {
 // Removes and returns the value at the start of the list
 // boolean value indicates the presence of a value
 func (l *DoublyLinkedList[val]) RemoveFirst() (v val, ok bool) {
+
+	// Lock the whole list mutex, as we are modifying list.first
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
 	if l.first != nil {
+
+		// Lock the mutex on the first node, as we are going to
+		// remove it
 		l.first.mutex.Lock()
 		defer l.first.mutex.Unlock()
 
+		ok = true         // we found a node
+		v = l.first.value // value to return
+
 		if l.first.next != nil {
+			// Lock the next node, as we need to modify its
+			// prev value to nil
 			l.first.next.mutex.Lock()
 			defer l.first.next.mutex.Unlock()
+
+			// set the list.first to the next node
+			l.first = l.first.next
+
+			// remove the prev node from the first
+			l.first.prev = nil
+
+			// amend the size
+			l.size--
+		} else {
+			// we removed all nodes
+			l.first = nil
+			l.last = nil
+			l.size = 0
 		}
 
-		v = l.first.value
-		ok = true
-		l.first = l.first.next
-		if l.first != nil {
-			l.first.prev = nil
-		} else {
-			l.last = nil
-		}
-		l.size--
 		return
 	}
 	ok = false
@@ -131,14 +152,20 @@ func (l *DoublyLinkedList[val]) PeekFirst() (v val, ok bool) {
 
 // Adds a new value at the end of the list
 func (l *DoublyLinkedList[val]) AddLast(v val) {
+
+	// Lock the whole list mutex, as we are modifying list.last
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
 	n := NewDoublyLinkedListNode(v)
 	n.prev = l.last
 	if l.last != nil {
+
+		// Lock the mutex on the first node, as we are going to
+		// modify its prev value
 		l.last.mutex.Lock()
 		defer l.last.mutex.Unlock()
+
 		l.last.next = n
 		l.last = n
 		l.size += 1
@@ -153,27 +180,41 @@ func (l *DoublyLinkedList[val]) AddLast(v val) {
 // Removes and returns the value at the end of the list
 // boolean value indicates the presence of a value
 func (l *DoublyLinkedList[val]) RemoveLast() (v val, ok bool) {
+
+	// Lock the whole list mutex, as we are modifying list.last
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
 	if l.last != nil {
+
+		// Lock the mutex on the last node, as we are going to
+		// remove it
 		l.last.mutex.Lock()
 		defer l.last.mutex.Unlock()
 
+		ok = true        // we found a node
+		v = l.last.value // value to return
+
 		if l.last.prev != nil {
+			// Lock the prev node, as we need to modify its
+			// next value to nil
 			l.last.prev.mutex.Lock()
 			defer l.last.prev.mutex.Unlock()
-		}
 
-		v = l.last.value
-		ok = true
-		l.last = l.last.prev
-		if l.last != nil {
+			// set the list.last to the prev node
+			l.last = l.last.prev
+
+			// remove the next node from the last
 			l.last.next = nil
+
+			// amend the size
+			l.size--
 		} else {
+			// we removed all nodes
 			l.first = nil
+			l.last = nil
+			l.size = 0
 		}
-		l.size--
 		return
 	}
 	v = *new(val)
@@ -241,8 +282,10 @@ func (l *DoublyLinkedList[val]) AddBefore(existingNode *DoublyLinkedListNode[val
 
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
+
 	existingNode.mutex.Lock()
 	defer existingNode.mutex.Unlock()
+
 	newNode.mutex.Lock()
 	defer newNode.mutex.Unlock()
 
