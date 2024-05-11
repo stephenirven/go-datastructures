@@ -60,28 +60,26 @@ func (l *DoublyLinkedList[val]) AddFirst(v val) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
+	n := NewDoublyLinkedListNode(v)
+	n.next = l.first
 	if l.first != nil {
 		l.first.mutex.Lock()
 		defer l.first.mutex.Unlock()
-	}
-
-	n := NewDoublyLinkedListNode(v)
-	n.next = l.first
-
-	if l.first != nil {
 		l.first.prev = n
+		l.first = n
+		l.size += 1
+	} else {
+		// list is empty
+		l.first = n
+		l.last = n
+		l.size = 1
 	}
-	l.first = n
-	l.size++
-	if l.last == nil {
-		l.last = l.first
-	}
+
 }
 
 // Removes and returns the value at the start of the list
 // boolean value indicates the presence of a value
 func (l *DoublyLinkedList[val]) RemoveFirst() (v val, ok bool) {
-
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
@@ -89,8 +87,13 @@ func (l *DoublyLinkedList[val]) RemoveFirst() (v val, ok bool) {
 		l.first.mutex.Lock()
 		defer l.first.mutex.Unlock()
 
-		ok = true
+		if l.first.next != nil {
+			l.first.next.mutex.Lock()
+			defer l.first.next.mutex.Unlock()
+		}
+
 		v = l.first.value
+		ok = true
 		l.first = l.first.next
 		if l.first != nil {
 			l.first.prev = nil
@@ -130,6 +133,7 @@ func (l *DoublyLinkedList[val]) PeekFirst() (v val, ok bool) {
 func (l *DoublyLinkedList[val]) AddLast(v val) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
+
 	n := NewDoublyLinkedListNode(v)
 	n.prev = l.last
 	if l.last != nil {
@@ -155,6 +159,7 @@ func (l *DoublyLinkedList[val]) RemoveLast() (v val, ok bool) {
 	if l.last != nil {
 		l.last.mutex.Lock()
 		defer l.last.mutex.Unlock()
+
 		if l.last.prev != nil {
 			l.last.prev.mutex.Lock()
 			defer l.last.prev.mutex.Unlock()
