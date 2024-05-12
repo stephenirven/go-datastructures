@@ -274,12 +274,12 @@ func TestList(t *testing.T) {
 				if l.First().Value() != -4 {
 					t.Errorf("\t%d\t AddBefore first should cause the node to be added as first", i)
 				}
-				if v, ok = l.PeekFirst(); !ok{
+				if v, ok = l.PeekFirst(); !ok {
 					t.Errorf("\t%d\t AddBefore first should cause the node to be added as first", i)
-				}				
-				if v != -4{
+				}
+				if v != -4 {
 					t.Errorf("\t%d\t AddBefore first should cause the node to be added as first", i)
-				}				
+				}
 
 				if l.First().Prev() != nil {
 					t.Errorf("\t%d\t AddBefore first should have nil prev", i)

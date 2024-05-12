@@ -41,7 +41,7 @@ func (n *DoublyLinkedListNode[val]) Next() *DoublyLinkedListNode[val] {
 func (n *DoublyLinkedListNode[val]) Prev() *DoublyLinkedListNode[val] {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
-	
+
 	if n.prev != nil {
 		return n.prev
 	}
@@ -69,14 +69,14 @@ func NewDoublyLinkedList[val comparable]() *DoublyLinkedList[val] {
 }
 
 // Get first node or nil
-func (l *DoublyLinkedList[val]) First() *DoublyLinkedListNode[val]{
+func (l *DoublyLinkedList[val]) First() *DoublyLinkedListNode[val] {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
 	return l.first
 }
 
 // Get last node or nil
-func (l *DoublyLinkedList[val]) Last() *DoublyLinkedListNode[val]{
+func (l *DoublyLinkedList[val]) Last() *DoublyLinkedListNode[val] {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
 	return l.last
