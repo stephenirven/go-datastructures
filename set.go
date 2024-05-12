@@ -14,7 +14,7 @@ func NewSet[val comparable]() *Set[val] {
 }
 
 // Returns the number of elements in this set
-func (s *Set[val]) Size() uint64 {
+func (s *Set[val]) Size() int {
 	return s.m.Size()
 }
 

@@ -5,6 +5,7 @@ import (
 	"slices"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -71,8 +72,8 @@ func TestList(t *testing.T) {
 
 				l.FromSlice(test.source)
 
-				if len(test.source) != l.size {
-					t.Errorf("\t%d\t Length should be %d : %d", i, len(test.source), l.size)
+				if len(test.source) != l.Size() {
+					t.Errorf("\t%d\t Length should be %d : %d", i, len(test.source), l.Size())
 				}
 
 				ts := l.Slice()
@@ -91,39 +92,39 @@ func TestList(t *testing.T) {
 				// bring the test data back to original order
 				slices.Reverse(test.source)
 
-				if l.first != nil && l.first.value != test.source[0] {
-					t.Errorf("\t%d\t First of list is wrong %v : %v", i, test.source[0], l.first.value)
+				if l.First() != nil && l.First().Value() != test.source[0] {
+					t.Errorf("\t%d\t First of list is wrong %v : %v", i, test.source[0], l.First().Value())
 				}
 
 				peekFirst, ok := l.PeekFirst()
 
-				if l.size > 0 && !ok {
+				if l.Size() > 0 && !ok {
 					t.Errorf("\t%d\t Peek() returned no value", i)
 				}
 
-				if l.size == 0 && ok {
+				if l.Size() == 0 && ok {
 					t.Errorf("\t%d\t Peek() returned a value on an empty list", i)
 				}
 
-				if l.first != nil && peekFirst != test.source[0] {
+				if l.First() != nil && peekFirst != test.source[0] {
 					t.Errorf("\t%d\t PeekFirst of list is wrong %v : %v", i, test.source[0], peekFirst)
 				}
 
-				if l.last != nil && l.last.value != test.source[len(test.source)-1] {
-					t.Errorf("\t%d\t Last of list is wrong %v : %v", i, test.source[len(test.source)-1], l.last.value)
+				if l.Last() != nil && l.Last().Value() != test.source[len(test.source)-1] {
+					t.Errorf("\t%d\t Last of list is wrong %v : %v", i, test.source[len(test.source)-1], l.Last().Value())
 				}
 
 				peekLast, ok := l.PeekLast()
 
-				if l.size > 0 && !ok {
+				if l.Size() > 0 && !ok {
 					t.Errorf("\t%d\t PeekLast() returned no value", i)
 				}
 
-				if l.size == 0 && ok {
+				if l.Size() == 0 && ok {
 					t.Errorf("\t%d\t PeekLast() returned a value for empty list : %v", i, peekLast)
 				}
 
-				if l.size > 0 && peekLast != test.source[len(test.source)-1] {
+				if l.Size() > 0 && peekLast != test.source[len(test.source)-1] {
 					t.Errorf("\t%d\t PeekLast of list is wrong %v : %v", i, test.source[len(test.source)-1], peekLast)
 				}
 
@@ -150,8 +151,8 @@ func TestList(t *testing.T) {
 					t.Errorf("\t%d\t PeekFirst of list is wrong %v : %v", i, -3, peekFirst)
 				}
 
-				if l.size != len(test.source)+3 {
-					t.Errorf("\t%d\t Size of list after AddFirst is wrong %v : %v", i, len(test.source)+3, l.size)
+				if l.Size() != len(test.source)+3 {
+					t.Errorf("\t%d\t Size of list after AddFirst is wrong %v : %v", i, len(test.source)+3, l.Size())
 				}
 
 				t.Logf("\t%d\t Testing adding to end of list", i)
@@ -177,8 +178,8 @@ func TestList(t *testing.T) {
 					t.Errorf("\t%d\t PeekLast of list is wrong %v : %v", i, 1e7, peekLast)
 				}
 
-				if l.size != len(test.source)+6 {
-					t.Errorf("\t%d\t Size of list after addfirst is wrong %v : %v", i, len(test.source)+6, l.size)
+				if l.Size() != len(test.source)+6 {
+					t.Errorf("\t%d\t Size of list after addfirst is wrong %v : %v", i, len(test.source)+6, l.Size())
 				}
 
 				t.Logf("\t%d\t Testing removing from start of list", i)
@@ -188,16 +189,18 @@ func TestList(t *testing.T) {
 					t.Errorf("\t%d\t RemoveFirst should return an item (%t) %v : %v", i, ok, -3, v)
 				}
 
-				if l.first.value != -2 {
+				fn := l.First()
+
+				if fn.Value() != -2 {
 					t.Errorf("\t%d\t First item should have value %v : %v", i, -2, v)
 				}
 
-				if l.first.prev != nil {
-					t.Errorf("\t%d\t First item should not have a prev node : %v", i, l.first.prev)
+				if fn.Prev() != nil {
+					t.Errorf("\t%d\t First item should not have a prev node : %v", i, fn.Prev())
 				}
 
-				if l.size != len(test.source)+5 {
-					t.Errorf("\t%d\t Size of list after RemoveFirst is wrong %v : %v", i, len(test.source)+5, l.size)
+				if l.Size() != len(test.source)+5 {
+					t.Errorf("\t%d\t Size of list after RemoveFirst is wrong %v : %v", i, len(test.source)+5, l.Size())
 				}
 
 				t.Logf("\t%d\t Testing removing from end of list", i)
@@ -207,41 +210,41 @@ func TestList(t *testing.T) {
 					t.Errorf("\t%d\t RemoveLast should return an item (%t) %v : %v", i, ok, 1e7, v)
 				}
 
-				if l.last.value != 1e6 {
+				if l.Last().Value() != 1e6 {
 					t.Errorf("\t%d\t First item should have value %v : %v", i, -2, v)
 				}
 
-				if l.last.next != nil {
-					t.Errorf("\t%d\t Last item should not have a next node : %v", i, l.last.next)
+				if l.Last().Next() != nil {
+					t.Errorf("\t%d\t Last item should not have a next node : %v", i, l.Last().Next())
 				}
 
-				if l.size != len(test.source)+4 {
-					t.Errorf("\t%d\t Size of list after addfirst is wrong %v : %v", i, len(test.source)+4, l.size)
+				if l.Size() != len(test.source)+4 {
+					t.Errorf("\t%d\t Size of list after addfirst is wrong %v : %v", i, len(test.source)+4, l.Size())
 				}
 
 				t.Logf("\t%d\t Testing Find", i)
 
 				sl, ok := l.FindLast(1e5)
-				if !ok || sl.value != 1e5 {
-					t.Errorf("\t%d\t Second last value (%t) should be %v : %v", i, ok, 1e5, sl.value)
+				if !ok || sl.Value() != 1e5 {
+					t.Errorf("\t%d\t Second last value (%t) should be %v : %v", i, ok, 1e5, sl.Value())
 				}
 
 				sl2, ok := l.FindFirst(1e5)
-				if !ok || sl2.value != 1e5 {
-					t.Errorf("\t%d\t Second last value (%t) should be %v : %v", i, ok, 1e5, sl2.value)
+				if !ok || sl2.Value() != 1e5 {
+					t.Errorf("\t%d\t Second last value (%t) should be %v : %v", i, ok, 1e5, sl2.Value())
 				}
 
 				if sl2 != sl {
 					t.Errorf("\t%d\t FindFirst and FindLast should return the same node %v : %v", i, &sl, &sl2)
 				}
 
-				if sl.next != l.last || l.last.next != nil {
-					t.Errorf("\t%d\t Item after the found item should be the last %v : %v", i, sl, l.last)
+				if sl.Next() != l.Last() || l.Last().Next() != nil {
+					t.Errorf("\t%d\t Item after the found item should be the last %v : %v", i, sl, l.Last())
 				}
 
 				t.Logf("\t%d\t Testing Contains", i)
 
-				if !l.Contains(l.first.value) || !l.Contains(l.last.value) || !l.Contains(sl.value) {
+				if !l.Contains(l.First().Value()) || !l.Contains(l.Last().Value()) || !l.Contains(sl.Value()) {
 					t.Errorf("\t%d\t List should contain first, last and second last item", i)
 				}
 
@@ -266,25 +269,31 @@ func TestList(t *testing.T) {
 				newFirst.next = newFirst
 				newFirst.prev = newFirst
 
-				l.AddBefore(l.first, newFirst)
+				l.AddBefore(l.First(), newFirst)
 
-				if l.first.value != -4 {
+				if l.First().Value() != -4 {
 					t.Errorf("\t%d\t AddBefore first should cause the node to be added as first", i)
 				}
+				if v, ok = l.PeekFirst(); !ok{
+					t.Errorf("\t%d\t AddBefore first should cause the node to be added as first", i)
+				}				
+				if v != -4{
+					t.Errorf("\t%d\t AddBefore first should cause the node to be added as first", i)
+				}				
 
-				if l.first.prev != nil {
+				if l.First().Prev() != nil {
 					t.Errorf("\t%d\t AddBefore first should have nil prev", i)
 				}
 
-				if l.first.next.value != -2 {
+				if l.First().Next().Value() != -2 {
 					t.Errorf("\t%d\t AddBefore first should have correct next", i)
 				}
 
-				if l.first.next.prev != newFirst {
+				if l.First().Next().Prev() != newFirst {
 					t.Errorf("\t%d\t AddBefore first should have next-prev correct", i)
 				}
 
-				if l.size != len(test.source)+5 {
+				if l.Size() != len(test.source)+5 {
 					t.Errorf("\t%d\t Size of list after AddBefore first is wrong %v : %v", i, len(test.source)+5, l.size)
 				}
 
@@ -293,34 +302,34 @@ func TestList(t *testing.T) {
 				newSecond.next = newSecond
 				newSecond.prev = newSecond
 
-				l.AddBefore(l.first.next, newSecond)
+				l.AddBefore(l.First().Next(), newSecond)
 
-				if l.first.next.value != -3 {
+				if l.First().Next().Value() != -3 {
 					t.Errorf("\t%d\t AddBefore second should cause the node to be added as second", i)
 				}
 
-				if l.first.next != newSecond {
+				if l.First().Next() != newSecond {
 					t.Errorf("\t%d\t AddBefore second should cause the node to be added as second", i)
 				}
 
-				if newSecond.prev != l.first {
+				if newSecond.Prev() != l.First() {
 					t.Errorf("\t%d\t AddBefore second should have first as prev", i)
 				}
 
-				if newSecond.next.value != -2 {
+				if newSecond.Next().Value() != -2 {
 					t.Errorf("\t%d\t AddBefore second should have correct next", i)
 				}
 
-				if newSecond.next.prev != newSecond {
+				if newSecond.Next().Prev() != newSecond {
 					t.Errorf("\t%d\t AddBefore second should have next-prev correct", i)
 				}
 
-				if newSecond.prev.next != newSecond {
+				if newSecond.Prev().Next() != newSecond {
 					t.Errorf("\t%d\t AddBefore second should have next-prev correct", i)
 				}
 
-				if l.size != len(test.source)+6 {
-					t.Errorf("\t%d\t Size of list after AddBefore second is wrong %v : %v", i, len(test.source)+6, l.size)
+				if l.Size() != len(test.source)+6 {
+					t.Errorf("\t%d\t Size of list after AddBefore second is wrong %v : %v", i, len(test.source)+6, l.Size())
 				}
 
 				t.Logf("\t%d\t Testing adding node before last", i)
@@ -328,34 +337,34 @@ func TestList(t *testing.T) {
 				newSecondLast.next = newSecond
 				newSecondLast.prev = newSecond
 
-				l.AddBefore(l.last, newSecondLast)
+				l.AddBefore(l.Last(), newSecondLast)
 
-				if l.last.prev.value != 500000 {
+				if l.Last().Prev().Value() != 500000 {
 					t.Errorf("\t%d\t AddBefore last should cause the node to be added as second last", i)
 				}
 
-				if l.last.prev != newSecondLast {
+				if l.Last().Prev() != newSecondLast {
 					t.Errorf("\t%d\t AddBefore last should cause the node to be added as second last", i)
 				}
 
-				if newSecondLast.next != l.last {
+				if newSecondLast.Next() != l.Last() {
 					t.Errorf("\t%d\t AddBefore second should have first as prev", i)
 				}
 
-				if newSecondLast.next.value != 1e6 {
+				if newSecondLast.Next().Value() != 1e6 {
 					t.Errorf("\t%d\t AddBefore second should have correct next", i)
 				}
 
-				if newSecondLast.prev.next != newSecondLast {
+				if newSecondLast.Prev().Next() != newSecondLast {
 					t.Errorf("\t%d\t AddBefore second should have prev-next correct", i)
 				}
 
-				if newSecondLast.next.prev != newSecondLast {
+				if newSecondLast.Next().Prev() != newSecondLast {
 					t.Errorf("\t%d\t AddBefore second should have prev-next correct", i)
 				}
 
-				if l.size != len(test.source)+7 {
-					t.Errorf("\t%d\t Size of list after AddBefore last is wrong %v : %v", i, len(test.source)+7, l.size)
+				if l.Size() != len(test.source)+7 {
+					t.Errorf("\t%d\t Size of list after AddBefore last is wrong %v : %v", i, len(test.source)+7, l.Size())
 				}
 
 				t.Logf("\t%d\t Testing adding after last node", i)
@@ -363,97 +372,97 @@ func TestList(t *testing.T) {
 				newLast.next = newFirst
 				newLast.prev = newFirst
 
-				l.AddAfter(l.last, newLast)
+				l.AddAfter(l.Last(), newLast)
 
-				if l.last.value != 10000000 {
+				if l.Last().Value() != 10000000 {
 					t.Errorf("\t%d\t AddAfter last should cause the node to be added as last", i)
 				}
 
-				if l.last.next != nil {
+				if l.Last().Next() != nil {
 					t.Errorf("\t%d\t AddAfter last should have nil next", i)
 				}
 
-				if l.last.prev.value != 1000000 {
+				if l.Last().Prev().Value() != 1000000 {
 					t.Errorf("\t%d\t AddAfter last should have correct prev", i)
 				}
 
-				if l.last.prev.next != newLast {
+				if l.Last().Prev().Next() != newLast {
 					t.Errorf("\t%d\t AddAfter last should have prev-next correct", i)
 				}
 
-				if l.size != len(test.source)+8 {
-					t.Errorf("\t%d\t Size of list after AddLast last is wrong %v : %v", i, len(test.source)+8, l.size)
+				if l.Size() != len(test.source)+8 {
+					t.Errorf("\t%d\t Size of list after AddLast last is wrong %v : %v", i, len(test.source)+8, l.Size())
 				}
 
 				t.Logf("\t%d\t Testing Unlink on first node", i)
 
-				f1 := l.first
+				f1 := l.First()
 				l.Unlink(f1)
 
-				if f1.next != nil || f1.prev != nil {
+				if f1.Next() != nil || f1.Prev() != nil {
 					t.Errorf("\t%d\t Unlink first should remove prev/next", i)
 				}
 
-				if l.first.prev != nil {
+				if l.First().Prev() != nil {
 					t.Errorf("\t%d\t Unlink first should ensure first has no prev", i)
 				}
 
-				if l.first.value != -3 {
-					t.Errorf("\t%d\t Value of first after unlink first is wrong %v : %v", i, -3, l.first.value)
+				if l.First().Value() != -3 {
+					t.Errorf("\t%d\t Value of first after unlink first is wrong %v : %v", i, -3, l.First().Value())
 				}
 
-				if l.size != len(test.source)+7 {
-					t.Errorf("\t%d\t Size of list after Unlink first is wrong %v : %v", i, len(test.source)+7, l.size)
+				if l.Size() != len(test.source)+7 {
+					t.Errorf("\t%d\t Size of list after Unlink first is wrong %v : %v", i, len(test.source)+7, l.Size())
 				}
 
 				t.Logf("\t%d\t Testing Unlink on last node", i)
 
-				l1 := l.last
+				l1 := l.Last()
 				l.Unlink(l1)
 
-				if l1.next != nil || l1.prev != nil {
+				if l1.Next() != nil || l1.Prev() != nil {
 					t.Errorf("\t%d\t Unlink last should remove prev/next", i)
 				}
 
-				if l.last.next != nil {
+				if l.Last().Next() != nil {
 					t.Errorf("\t%d\t Unlink last should ensure last has no next", i)
 				}
 
-				if l.last.value != 1e6 {
-					t.Errorf("\t%d\t Value of last after unlink last is wrong %v : %v", i, 1e6, l.last.value)
+				if l.Last().Value() != 1e6 {
+					t.Errorf("\t%d\t Value of last after unlink last is wrong %v : %v", i, 1e6, l.Last().Value())
 				}
 
-				if l.size != len(test.source)+6 {
-					t.Errorf("\t%d\t length of list after Unlink last is wrong %v : %v", i, len(test.source)+6, l.size)
+				if l.Size() != len(test.source)+6 {
+					t.Errorf("\t%d\t length of list after Unlink last is wrong %v : %v", i, len(test.source)+6, l.Size())
 				}
 
 				t.Logf("\t%d\t Testing UnLink on node in list body", i)
 
-				m1 := l.last.prev
+				m1 := l.Last().Prev()
 				l.Unlink(m1)
 
-				if m1.next != nil || m1.prev != nil {
+				if m1.Next() != nil || m1.Prev() != nil {
 					t.Errorf("\t%d\t Unlink second last should remove prev/next", i)
 				}
 
-				if l.last.next != nil {
+				if l.Last().Next() != nil {
 					t.Errorf("\t%d\t Unlink second last should ensure last has no next", i)
 				}
 
-				if l.last.value != 1e6 {
-					t.Errorf("\t%d\t Value of last after unlink last is wrong %v : %v", i, 1e6, l.last.value)
+				if l.Last().Value() != 1e6 {
+					t.Errorf("\t%d\t Value of last after unlink last is wrong %v : %v", i, 1e6, l.Last().Value())
 				}
 
-				if l.last.prev == nil {
+				if l.Last().Prev() == nil {
 					t.Errorf("\t%d\t Value of last prev after unlink second last is not set", i)
 				}
 
-				if l.last.prev.next != l.last {
-					t.Errorf("\t%d\t Value of last prev next after unlink second last is not correct %#v : %#v", i, l.last, l.last.prev.next)
+				if l.Last().Prev().Next() != l.Last() {
+					t.Errorf("\t%d\t Value of last prev next after unlink second last is not correct %#v : %#v", i, l.Last(), l.Last().Prev().Next())
 				}
 
-				if l.size != len(test.source)+5 {
-					t.Errorf("\t%d\t Size of list after Unlink last is wrong %v : %v", i, len(test.source)+5, l.size)
+				if l.Size() != len(test.source)+5 {
+					t.Errorf("\t%d\t Size of list after Unlink last is wrong %v : %v", i, len(test.source)+5, l.Size())
 				}
 
 				t.Logf("\t%d\t Testing Slice behaviour", i)
@@ -461,7 +470,7 @@ func TestList(t *testing.T) {
 				forwardSlice := l.Slice()
 				reverseSlice := l.ReverseSlice()
 
-				if l.size != len(forwardSlice) || l.size != len(reverseSlice) {
+				if l.Size() != len(forwardSlice) || l.Size() != len(reverseSlice) {
 					t.Errorf("\t%d\t Size of slices does not match size %v : %v : %v", i, l.size, len(forwardSlice), len(reverseSlice))
 				}
 
@@ -470,8 +479,8 @@ func TestList(t *testing.T) {
 				sourceData = append(sourceData, 1e5)
 				sourceData = append(sourceData, 1e6)
 
-				if l.size != len(sourceData) {
-					t.Errorf("\t%d\t Size of source data does not match size %v : %v", i, l.size, len(sourceData))
+				if l.Size() != len(sourceData) {
+					t.Errorf("\t%d\t Size of source data does not match size %v : %v", i, l.Size(), len(sourceData))
 				}
 
 				if !cmp.Equal(forwardSlice, sourceData) {
@@ -487,14 +496,14 @@ func TestList(t *testing.T) {
 				t.Logf("\t%d\t Testing moving the first node", i)
 				{
 					moveFirst := l.Slice()
-					l.ToFirst(l.first)
+					l.ToFirst(l.First())
 
 					if !cmp.Equal(moveFirst, l.Slice()) {
 						t.Errorf("\t%d\t Moving first node to first shouldn't change list %#v : %v ", i, moveFirst, l.Slice())
 					}
 
 					moveFirst = append(moveFirst, moveFirst[0])[1:]
-					l.ToLast(l.first)
+					l.ToLast(l.First())
 
 					if !cmp.Equal(moveFirst, l.Slice()) {
 						t.Errorf("\t%d\t Moving first node to last should reflect in the shouldn't change list %#v : %v ", i, moveFirst, l.Slice())
@@ -505,7 +514,7 @@ func TestList(t *testing.T) {
 				t.Logf("\t%d\t Testing moving the last node", i)
 				{
 					moveLast := l.Slice()
-					l.ToLast(l.last)
+					l.ToLast(l.Last())
 
 					if !cmp.Equal(moveLast, l.Slice()) {
 						t.Errorf("\t%d\t Moving last node to last shouldn't change list %#v : %v ", i, moveLast, l.Slice())
@@ -513,7 +522,7 @@ func TestList(t *testing.T) {
 
 					moveLast = append([]int{moveLast[len(moveLast)-1]}, moveLast...)
 					moveLast = moveLast[:len(moveLast)-1]
-					l.ToFirst(l.last)
+					l.ToFirst(l.Last())
 
 					if !cmp.Equal(moveLast, l.Slice()) {
 						t.Errorf("\t%d\t Moving last item to first should reflect in the shouldn't change list %#v : %v ", i, moveLast, l.Slice())
@@ -521,10 +530,10 @@ func TestList(t *testing.T) {
 
 				}
 
-				if l.size > 2 { // if there are more than 2 nodes
+				if l.Size() > 2 { // if there are more than 2 nodes
 					t.Logf("\t%d\t Testing moving a node from the list body", i)
 					moveMid := l.Slice()
-					l.ToLast(l.last.prev)
+					l.ToLast(l.Last().Prev())
 
 					midVal := moveMid[len(moveMid)-2]
 					moveMid = append(moveMid[0:len(moveMid)-2], moveMid[len(moveMid)-1:]...)
@@ -537,7 +546,7 @@ func TestList(t *testing.T) {
 					moveMid = append([]int{moveMid[len(moveMid)-2]}, moveMid[0:len(moveMid)-2]...)
 					moveMid = append(moveMid, lastVal)
 
-					l.ToFirst(l.last.prev)
+					l.ToFirst(l.Last().Prev())
 
 					if !cmp.Equal(moveMid, l.Slice()) {
 						t.Errorf("\t%d\t Moving last item to first should reflect in the shouldn't change list %#v : %v ", i, moveMid, l.Slice())
@@ -548,16 +557,16 @@ func TestList(t *testing.T) {
 				t.Logf("\t%d\t Testing the Clear functionality", i)
 
 				l.Clear()
-				if l.size != 0 {
-					t.Errorf("\t%d\t After clear, list sould have size 0 : %v", i, l.size)
+				if l.Size() != 0 {
+					t.Errorf("\t%d\t After clear, list sould have size 0 : %v", i, l.Size())
 				}
 
-				if l.first != nil {
-					t.Errorf("\t%d\t After clear, list sould have no first node : %#v", i, l.first)
+				if l.First() != nil {
+					t.Errorf("\t%d\t After clear, list sould have no first node : %#v", i, l.First())
 				}
 
-				if l.last != nil {
-					t.Errorf("\t%d\t After clear, list sould have no last node : %#v", i, l.last)
+				if l.Last() != nil {
+					t.Errorf("\t%d\t After clear, list sould have no last node : %#v", i, l.Last())
 				}
 
 			}
@@ -572,18 +581,18 @@ func TestListSingleItem(t *testing.T) {
 		l := NewDoublyLinkedList[int]()
 		l.AddFirst(1)
 
-		l.Unlink(l.first)
+		l.Unlink(l.First())
 
-		if l.size != 0 {
-			t.Errorf("Expected size of linked list to be 0 : %v", l.size)
+		if l.Size() != 0 {
+			t.Errorf("Expected size of linked list to be 0 : %v", l.Size())
 		}
 
 		l.AddFirst(10)
 
-		l.Unlink(l.last)
+		l.Unlink(l.Last())
 
-		if l.size != 0 {
-			t.Errorf("Expected size of linked list to be 0 : %v", l.size)
+		if l.Size() != 0 {
+			t.Errorf("Expected size of linked list to be 0 : %v", l.Size())
 		}
 
 	}
@@ -615,8 +624,8 @@ func TestListConcurrentFirstLast(t *testing.T) {
 		}
 		wg.Wait()
 
-		if l.size != concurrency {
-			t.Errorf("\t Size was expected to be %d : %v", concurrency, l.size)
+		if l.Size() != concurrency {
+			t.Errorf("\t Size was expected to be %d : %v", concurrency, l.Size())
 		}
 
 		for i := range concurrency {
@@ -630,6 +639,7 @@ func TestListConcurrentFirstLast(t *testing.T) {
 		t.Logf("Testing RemoveFirst and RemoveLast with %d concurrent", concurrency)
 		wg.Add(concurrency)
 		for i := range concurrency {
+			i := i // prevent capture
 			mod := i % 4
 			if mod == 0 {
 				go func() {
@@ -655,8 +665,8 @@ func TestListConcurrentFirstLast(t *testing.T) {
 		}
 		wg.Wait()
 
-		if l.size != concurrency {
-			t.Errorf("\t Size was expected to be 0 : %v", l.size)
+		if l.Size() != concurrency {
+			t.Errorf("\t Size was expected to be 0 : %v", l.Size())
 		}
 
 	}
@@ -677,53 +687,67 @@ func TestListConcurrentBeforeAfter(t *testing.T) {
 			if i%2 == 0 {
 				go func() {
 					defer wg.Done()
-					l.AddBefore(l.first, NewDoublyLinkedListNode(i))
+					l.AddBefore(l.First(), NewDoublyLinkedListNode(i))
+
 				}()
 			} else {
 				go func() {
 					defer wg.Done()
-					l.AddAfter(l.first, NewDoublyLinkedListNode(i))
+					l.AddAfter(l.First(), NewDoublyLinkedListNode(i))
 				}()
 			}
 		}
 		wg.Wait()
 
-		if l.size != concurrency+1 {
-			t.Errorf("\t Size was expected to be %d : %d", concurrency+1, l.size)
+		if l.Size() != concurrency+1 {
+			t.Errorf("\t Size was expected to be %d : %d", concurrency+1, l.Size())
 		}
 
-		// t.Logf("Testing ToFirst / ToLast with %d concurrent", n)
+		t.Logf("Testing ToFirst / ToLast with %d concurrent", concurrency)
 
-		// wg.Add(n)
-		// for i := range n {
-		// 	if i%2 == 0 {
-		// 		go func() {
-		// 			defer wg.Done()
-		// 			time.Sleep(time.Duration(rand.Intn(n)) * time.Microsecond) // random sleep to increase unpredictability
-		// 			l.ToLast(l.first)
-		// 		}()
-		// 	} else {
-		// 		go func() {
-		// 			defer wg.Done()
-		// 			time.Sleep(time.Duration(rand.Intn(n)) * time.Microsecond)
-		// 			l.ToFirst(l.last)
-		// 		}()
-		// 	}
-		// }
-		// wg.Wait()
+		wg.Add(concurrency)
+		for i := range concurrency {
+			i := i // prevent capture
+			if i%2 == 0 {
+				go func() {
+					defer wg.Done()
+					time.Sleep(time.Duration(rand.Intn(concurrency)) * time.Microsecond) // random sleep to increase unpredictability
+					l.ToLast(l.First())
+				}()
+			} else {
+				go func() {
+					defer wg.Done()
+					time.Sleep(time.Duration(rand.Intn(concurrency)) * time.Microsecond)
+					l.ToFirst(l.Last())
+				}()
+			}
+		}
+		wg.Wait()
 
-		// if l.size != n+1 {
-		// 	t.Errorf("\t Size was expected to be %d : %v", n+1, l.size)
-		// }
+		if l.Size() != concurrency+1 {
+			t.Errorf("\t Size was expected to be %d : %v", concurrency+1, l.Size())
+		}
 
-		// for i := range n {
-		// 	if !l.Contains(i) {
-		// 		t.Errorf("Expected list to contain value: %v", i)
-		// 	}
-		// }
-		// if !l.Contains(100000) {
-		// 	t.Errorf("Expected list to contain value: %v", 100000)
-		// }
+		for i := range concurrency {
+			if !l.Contains(i) {
+				t.Errorf("Expected list to contain value: %v", i)
+			}
+		}
+		if !l.Contains(100000) {
+			t.Errorf("Expected list to contain value: %v", 100000)
+		}
 
+	}
+}
+
+func TestListConcurrentToFirstLast(t *testing.T) {
+	t.Parallel()
+	t.Log("Given the need to test concurrent add/remove before/after the first item in the list")
+	{
+		l := NewDoublyLinkedList[int]()
+
+		l.AddFirst(100000) // single entry to allow AddBefore / AddAfter
+
+		t.Log("Testing AddBefore and AddAfter concurrently")
 	}
 }

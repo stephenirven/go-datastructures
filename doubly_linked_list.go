@@ -26,12 +26,36 @@ func NewDoublyLinkedListNode[val comparable](v val) *DoublyLinkedListNode[val] {
 	return &n
 }
 
+// Get the next node or nil
+func (n *DoublyLinkedListNode[val]) Next() *DoublyLinkedListNode[val] {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	if n.next != nil {
+		return n.next
+	}
+	return nil
+}
+
+// Get the previous node or nil
+func (n *DoublyLinkedListNode[val]) Prev() *DoublyLinkedListNode[val] {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+	
+	if n.prev != nil {
+		return n.prev
+	}
+	return nil
+}
+
+// Get the value on the node
 func (n *DoublyLinkedListNode[val]) Value() val {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
 	return n.value
 }
 
+// Set the value on the node
 func (n *DoublyLinkedListNode[val]) SetValue(v val) {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
@@ -44,7 +68,28 @@ func NewDoublyLinkedList[val comparable]() *DoublyLinkedList[val] {
 	return &l
 }
 
-// Removes all nodes from the list
+// Get first node or nil
+func (l *DoublyLinkedList[val]) First() *DoublyLinkedListNode[val]{
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
+	return l.first
+}
+
+// Get last node or nil
+func (l *DoublyLinkedList[val]) Last() *DoublyLinkedListNode[val]{
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
+	return l.last
+}
+
+// Get the size of the list
+func (l *DoublyLinkedList[val]) Size() int {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
+	return l.size
+}
+
+// Remove all nodes from the list
 func (l *DoublyLinkedList[val]) Clear() {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
@@ -52,8 +97,6 @@ func (l *DoublyLinkedList[val]) Clear() {
 	l.first = nil
 	l.last = nil
 }
-
-// Start of list functions
 
 // Adds a new value at the start of the list
 func (l *DoublyLinkedList[val]) AddFirst(v val) {
@@ -83,8 +126,8 @@ func (l *DoublyLinkedList[val]) AddFirst(v val) {
 
 }
 
-// Removes and returns the value at the start of the list
-// boolean value indicates the presence of a value
+// Remove and return the value at the start of the list
+// boolean ok indicates the presence of a value
 func (l *DoublyLinkedList[val]) RemoveFirst() (v val, ok bool) {
 
 	// Lock the whole list mutex, as we are modifying list.first
@@ -129,8 +172,8 @@ func (l *DoublyLinkedList[val]) RemoveFirst() (v val, ok bool) {
 	return
 }
 
-// Returns the value at the start of the list
-// boolean value indicates the presence of a value
+// Return the value at the start of the list
+// boolean ok indicates the presence of a value
 func (l *DoublyLinkedList[val]) PeekFirst() (v val, ok bool) {
 
 	l.mutex.RLock()
@@ -150,7 +193,7 @@ func (l *DoublyLinkedList[val]) PeekFirst() (v val, ok bool) {
 
 // End of list funcs
 
-// Adds a new value at the end of the list
+// Add a new value at the end of the list
 func (l *DoublyLinkedList[val]) AddLast(v val) {
 
 	// Lock the whole list mutex, as we are modifying list.last
@@ -177,8 +220,8 @@ func (l *DoublyLinkedList[val]) AddLast(v val) {
 	}
 }
 
-// Removes and returns the value at the end of the list
-// boolean value indicates the presence of a value
+// Remove and returns the value at the end of the list
+// boolean ok indicates the presence of a value
 func (l *DoublyLinkedList[val]) RemoveLast() (v val, ok bool) {
 
 	// Lock the whole list mutex, as we are modifying list.last
@@ -222,8 +265,8 @@ func (l *DoublyLinkedList[val]) RemoveLast() (v val, ok bool) {
 	return
 }
 
-// Returns the value at the end of the list
-// boolean value indicates the presence of a value
+// Return the value at the end of the list
+// boolean ok indicates the presence of a value
 func (l *DoublyLinkedList[val]) PeekLast() (v val, ok bool) {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
@@ -243,7 +286,7 @@ func (l *DoublyLinkedList[val]) PeekLast() (v val, ok bool) {
 
 // Arbitary position functions
 
-// Adds a new node after an existing node in the list
+// Add a new node after an existing node in the list
 func (l *DoublyLinkedList[val]) AddAfter(existingNode *DoublyLinkedListNode[val], newNode *DoublyLinkedListNode[val]) {
 	if existingNode == nil {
 		return
@@ -274,7 +317,7 @@ func (l *DoublyLinkedList[val]) AddAfter(existingNode *DoublyLinkedListNode[val]
 	l.size++
 }
 
-// Adds a new node before an existing node in the list
+// Add a new node before an existing node in the list
 func (l *DoublyLinkedList[val]) AddBefore(existingNode *DoublyLinkedListNode[val], newNode *DoublyLinkedListNode[val]) {
 	if existingNode == nil {
 		return
@@ -308,7 +351,7 @@ func (l *DoublyLinkedList[val]) AddBefore(existingNode *DoublyLinkedListNode[val
 	l.size++
 }
 
-// Determines whether a value is in the list
+// Determine whether a value is in the list
 func (l *DoublyLinkedList[val]) Contains(v val) bool {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
@@ -321,8 +364,8 @@ func (l *DoublyLinkedList[val]) Contains(v val) bool {
 	return false
 }
 
-// Finds the first node that contains the specified value
-// boolean value indicates the presence of a value
+// Find the first node that contains the specified value
+// boolean ok indicates the presence of a value
 func (l *DoublyLinkedList[val]) FindFirst(v val) (node *DoublyLinkedListNode[val], ok bool) {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
@@ -335,8 +378,8 @@ func (l *DoublyLinkedList[val]) FindFirst(v val) (node *DoublyLinkedListNode[val
 	return nil, false
 }
 
-// Finds the last node that contains the specified value
-// boolean value indicates the presence of a value
+// Find the last node that contains the specified value
+// boolean ok indicates the presence of a value
 func (l *DoublyLinkedList[val]) FindLast(v val) (node *DoublyLinkedListNode[val], ok bool) {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
@@ -349,8 +392,8 @@ func (l *DoublyLinkedList[val]) FindLast(v val) (node *DoublyLinkedListNode[val]
 	return nil, false
 }
 
-// Finds the first node that matches the predicate
-// boolean value indicates the presence of a value
+// Find the first node that matches the predicate
+// boolean ok indicates the presence of a value
 func (l *DoublyLinkedList[val]) FindFirstFunc(predicate func(v val) bool) (node *DoublyLinkedListNode[val], ok bool) {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
@@ -363,8 +406,8 @@ func (l *DoublyLinkedList[val]) FindFirstFunc(predicate func(v val) bool) (node 
 	return nil, false
 }
 
-// Finds the last node that matches the predicate
-// boolean value indicates the presence of a value
+// Find the last node that matches the predicate
+// boolean ok indicates the presence of a value
 func (l *DoublyLinkedList[val]) FindLastFunc(predicate func(v val) bool) (node *DoublyLinkedListNode[val], ok bool) {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
@@ -377,7 +420,7 @@ func (l *DoublyLinkedList[val]) FindLastFunc(predicate func(v val) bool) (node *
 	return nil, false
 }
 
-// Disconnects the node from the list
+// Disconnect the node from the list
 func (l *DoublyLinkedList[val]) Unlink(n *DoublyLinkedListNode[val]) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
@@ -410,7 +453,7 @@ func (l *DoublyLinkedList[val]) Unlink(n *DoublyLinkedListNode[val]) {
 	l.size--
 }
 
-// Moves the node to the first position of the list
+// Move the node to the first position of the list
 func (l *DoublyLinkedList[val]) ToFirst(n *DoublyLinkedListNode[val]) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
@@ -448,7 +491,7 @@ func (l *DoublyLinkedList[val]) ToFirst(n *DoublyLinkedListNode[val]) {
 	l.first = n
 }
 
-// Moves the node to the last position of the list
+// Move the node to the last position of the list
 func (l *DoublyLinkedList[val]) ToLast(n *DoublyLinkedListNode[val]) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
@@ -483,6 +526,7 @@ func (l *DoublyLinkedList[val]) ToLast(n *DoublyLinkedListNode[val]) {
 	l.last = n
 }
 
+// Return a slice of the list values
 func (l *DoublyLinkedList[val]) Slice() (slice []val) {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
@@ -497,6 +541,7 @@ func (l *DoublyLinkedList[val]) Slice() (slice []val) {
 	return
 }
 
+// Replace the list values with those from the slice
 func (l *DoublyLinkedList[val]) FromSlice(slice []val) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
@@ -517,6 +562,7 @@ func (l *DoublyLinkedList[val]) FromSlice(slice []val) {
 	l.last = n
 }
 
+// Return a slice of the list values in reverse order
 func (l *DoublyLinkedList[val]) ReverseSlice() (slice []val) {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
@@ -531,7 +577,8 @@ func (l *DoublyLinkedList[val]) ReverseSlice() (slice []val) {
 	return
 }
 
-// Read lock only - TODO add lock version
+// Apply the provided function to each node in the list
+// function must NOT modify the list when used with concurrency
 func (l *DoublyLinkedList[val]) Do(f func(v val)) {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
@@ -541,7 +588,8 @@ func (l *DoublyLinkedList[val]) Do(f func(v val)) {
 	}
 }
 
-// read lock only
+// Apply the provided function to each node on the list in reverse
+// function must NOT modify the list when used with concurrency
 func (l *DoublyLinkedList[val]) DoReverse(f func(v val)) {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()

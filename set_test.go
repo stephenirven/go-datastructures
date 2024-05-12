@@ -66,7 +66,7 @@ func TestSet(t *testing.T) {
 
 				s.AddSlice(test.source)
 
-				if s.Size() != uint64(test.uniqueCount) {
+				if s.Size() != test.uniqueCount {
 					t.Errorf("\t%d\t Size on populated set should be %d : %d", i, test.uniqueCount, s.Size())
 				}
 
@@ -109,7 +109,7 @@ func TestSet(t *testing.T) {
 				{
 					selfUnion := s.Union(s)
 
-					if selfUnion.Size() != uint64(test.uniqueCount) {
+					if selfUnion.Size() != test.uniqueCount {
 						t.Errorf("\t%d\t Size on union of set with self should be %d : %d", i, test.uniqueCount, s.Size())
 					}
 
@@ -129,7 +129,7 @@ func TestSet(t *testing.T) {
 
 					union := s.Union(ns)
 
-					if union.Size() != uint64(test.uniqueCount)+1 {
+					if union.Size() != test.uniqueCount+1 {
 						t.Errorf("\t%d\t Size on union of set with single element set should be %d : %d", i, test.uniqueCount+1, union.Size())
 					}
 
@@ -158,7 +158,7 @@ func TestSet(t *testing.T) {
 
 						diff := s.Difference(ds)
 						t.Logf("Diff: %v", diff.Slice())
-						if diff.Size() != uint64(test.uniqueCount)-1 {
+						if diff.Size() != test.uniqueCount-1 {
 							t.Errorf("\t%d\t Size on difference of set with first element of set should be %d : %d", i, test.uniqueCount-1, diff.Size())
 						}
 

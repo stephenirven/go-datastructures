@@ -77,7 +77,7 @@ func TestMap(t *testing.T) {
 
 				m.PutAll(test.source)
 
-				if m.Size() != uint64(len(test.source)) {
+				if m.Size() != len(test.source) {
 					t.Errorf("\t%d\t PutAll on sample data should be correct length %d : %d", i, len(test.source), m.size)
 				}
 
@@ -92,7 +92,7 @@ func TestMap(t *testing.T) {
 
 				{
 					ks := m.KeySet()
-					if ks.Size() != uint64(len(test.source)) {
+					if ks.Size() != len(test.source) {
 						t.Errorf("\t%d\t KeySet was unexpected size %d : %d", i, ks.Size(), len(test.source))
 					}
 
@@ -126,7 +126,7 @@ func TestMap(t *testing.T) {
 				}
 				{
 					m.Put("anotherKey", 210)
-					if m.Size() != uint64(len(test.source)+1) {
+					if m.Size() != len(test.source)+1 {
 						t.Errorf("\t%d\t Add did not affect size: %d", i, m.Size())
 					}
 
@@ -147,7 +147,7 @@ func TestMap(t *testing.T) {
 					test.source = append(test.source, MapEntry[string, int]{"anotherKey", 1000})
 
 					m.Put("anotherKey", 1000)
-					if m.Size() != uint64(len(test.source)) {
+					if m.Size() != len(test.source) {
 						t.Errorf("\t%d\t Put on existing key affected size: %d", i, m.Size())
 					}
 

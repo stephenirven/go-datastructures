@@ -5,6 +5,7 @@ import (
 	"hash/maphash"
 	"sync"
 	"sync/atomic"
+	"unsafe"
 
 	"golang.org/x/sync/semaphore"
 )
@@ -17,19 +18,19 @@ import (
 // The seed for the hashing function
 var seed = maphash.MakeSeed()
 
-const loadFactor uint64 = 5 // the limit to the average list length
+const loadFactor int = 5 // the limit to the average list length
 
 // Generic hashmap with mutex and growth behaviour
 type Map[key comparable, val comparable] struct {
 	buckets  []DoublyLinkedList[*MapEntry[key, val]]
-	capacity uint64
+	capacity int
 	mutex    sync.RWMutex
 	resize   *semaphore.Weighted // Indicates resize in progress
-	size     uint64
+	size     int
 }
 
 // constructor
-func NewMap[key comparable, val comparable](capacity uint64) *Map[key, val] {
+func NewMap[key comparable, val comparable](capacity int) *Map[key, val] {
 
 	m := Map[key, val]{
 		buckets:  make([]DoublyLinkedList[*MapEntry[key, val]], capacity),
@@ -41,7 +42,7 @@ func NewMap[key comparable, val comparable](capacity uint64) *Map[key, val] {
 }
 
 // Returns the number of key-value mappings in this map.
-func (m *Map[key, val]) Size() uint64 {
+func (m *Map[key, val]) Size() int {
 	return m.size
 }
 
@@ -61,7 +62,7 @@ func (m *Map[key, val]) Get(k key) (value val, ok bool) {
 	defer m.mutex.RUnlock()
 
 	// generate the numeric index within the backing slice
-	idx := hash(k) % m.capacity
+	idx := hash(k, m.capacity)
 
 	// read lock the bucket while searching
 	m.buckets[idx].mutex.RLock()
@@ -95,7 +96,7 @@ func (m *Map[key, val]) Put(k key, v val) {
 	defer m.mutex.RUnlock()
 
 	// get the numeric index
-	idx := hash(k) % m.capacity
+	idx := hash(k, m.capacity)
 
 	// Search for the key, starting with the most recently added
 	entry, ok := m.buckets[idx].FindFirstFunc(func(v *MapEntry[key, val]) bool {
@@ -107,7 +108,11 @@ func (m *Map[key, val]) Put(k key, v val) {
 	} else {
 		entry := MapEntry[key, val]{key: k, value: v}
 		m.buckets[idx].AddFirst(&entry)
-		atomic.AddUint64(&m.size, uint64(1))
+		if unsafe.Sizeof(m.size) == 8 {
+			atomic.AddInt64((*int64)(unsafe.Pointer(&m.size)), 1)
+		} else {
+			atomic.AddInt32((*int32)(unsafe.Pointer(&m.size)), 1)
+		}
 	}
 
 }
@@ -128,7 +133,7 @@ func (m *Map[key, val]) Remove(k key) (ok bool) {
 	defer m.mutex.RUnlock()
 
 	// get the numeric index
-	idx := hash(k) % m.capacity
+	idx := hash(k, m.capacity)
 
 	// Search for the key, starting with the most recently added
 	entry, ok := m.buckets[idx].FindFirstFunc(func(v *MapEntry[key, val]) bool {
@@ -136,7 +141,11 @@ func (m *Map[key, val]) Remove(k key) (ok bool) {
 	})
 	if ok {
 		m.buckets[idx].Unlink(entry)
-		atomic.AddUint64(&m.size, ^uint64(0)) // addition overflow to subtract 1
+		if unsafe.Sizeof(m.size) == 8 {
+			atomic.AddInt64((*int64)(unsafe.Pointer(&m.size)), -1)
+		} else {
+			atomic.AddInt32((*int32)(unsafe.Pointer(&m.size)), -1)
+		}
 		return
 	}
 
@@ -148,7 +157,11 @@ func (m *Map[key, val]) Clear() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.buckets = make([]DoublyLinkedList[*MapEntry[key, val]], m.capacity)
-	atomic.StoreUint64(&m.size, 0)
+	if unsafe.Sizeof(m.size) == 8 {
+		atomic.StoreInt64((*int64)(unsafe.Pointer(&m.size)), 0)
+	} else {
+		atomic.StoreInt32((*int32)(unsafe.Pointer(&m.size)), 0)
+	}
 
 	m.size = 0
 
@@ -161,7 +174,7 @@ func (m *Map[key, val]) ContainsKey(k key) (ok bool) {
 	defer m.mutex.RUnlock()
 
 	// get the numeric index
-	idx := hash(k) % m.capacity
+	idx := hash(k, m.capacity)
 
 	// Search for the key, starting with the most recently added
 	_, ok = m.buckets[idx].FindFirstFunc(func(v *MapEntry[key, val]) bool {
@@ -239,7 +252,7 @@ func (m *Map[key, val]) grow() {
 	// build a new set of populated buckets
 	for b := range m.buckets {
 		m.buckets[b].Do(func(e *MapEntry[key, val]) {
-			idx := hash(e.key) % newCapacity
+			idx := hash(e.key, newCapacity)
 			newBuckets[idx].AddFirst(e)
 		})
 	}
@@ -249,28 +262,28 @@ func (m *Map[key, val]) grow() {
 }
 
 // Used internally to hash a key to a int index
-func hash[key comparable](k key) uint64 {
+func hash[key comparable](k key, capacity int) int {
 	var h maphash.Hash
 	h.SetSeed(seed)
 	h.Write([]byte(fmt.Sprintf("%v", k)))
-	return h.Sum64()
+	return int(h.Sum64() % uint64(capacity))
 }
 
 // Used internally to decide (smoothed) growth rate. Figures based on
 // https://go.googlesource.com/go/+/2dda92ff6f9f07eeb110ecbf0fc2d7a0ddd27f9d
-func newCapacity(currentCapacity uint64) uint64 {
+func newCapacity(currentCapacity int) int {
 
 	if currentCapacity < 256 {
 		return 2 * currentCapacity
 	}
 	if currentCapacity < 512 {
-		return uint64(1.63 * float64(currentCapacity))
+		return int(1.63 * float64(currentCapacity))
 	}
 	if currentCapacity < 1024 {
-		return uint64(1.44 * float64(currentCapacity))
+		return int(1.44 * float64(currentCapacity))
 	}
 	if currentCapacity < 2048 {
-		return uint64(1.35 * float64(currentCapacity))
+		return int(1.35 * float64(currentCapacity))
 	}
-	return uint64(1.30 * float64(currentCapacity))
+	return int(1.30 * float64(currentCapacity))
 }
