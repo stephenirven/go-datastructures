@@ -43,7 +43,11 @@ func NewMap[key comparable, val comparable](capacity int) *Map[key, val] {
 
 // Returns the number of key-value mappings in this map.
 func (m *Map[key, val]) Size() int {
-	return m.size
+	if unsafe.Sizeof(m.size) == 8 {
+		return int(atomic.LoadInt64((*int64)(unsafe.Pointer(&m.size))))
+	} else {
+		return int(atomic.LoadInt32((*int32)(unsafe.Pointer(&m.size))))
+	}
 }
 
 // Structure to store key-value mappings in the map
@@ -84,16 +88,16 @@ func (m *Map[key, val]) Get(k key) (value val, ok bool) {
 // Associates the specified value with the specified key in this map.
 func (m *Map[key, val]) Put(k key, v val) {
 
+	// read lock while we search
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
 	// If we need a resize and one isn't already in progress, set it running
-	if (m.size / m.capacity) > loadFactor {
+	if (m.Size() / m.capacity) > loadFactor {
 		if m.resize.TryAcquire(1) {
 			go m.grow()
 		}
 	}
-
-	// read lock while we search
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
 
 	// get the numeric index
 	idx := hash(k, m.capacity)

@@ -739,15 +739,3 @@ func TestListConcurrentBeforeAfter(t *testing.T) {
 
 	}
 }
-
-func TestListConcurrentToFirstLast(t *testing.T) {
-	t.Parallel()
-	t.Log("Given the need to test concurrent add/remove before/after the first item in the list")
-	{
-		l := NewDoublyLinkedList[int]()
-
-		l.AddFirst(100000) // single entry to allow AddBefore / AddAfter
-
-		t.Log("Testing AddBefore and AddAfter concurrently")
-	}
-}
