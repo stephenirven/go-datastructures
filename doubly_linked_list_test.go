@@ -264,10 +264,8 @@ func TestList(t *testing.T) {
 					t.Errorf("\t%d\t Non present value found first %v : %v", i, npv, nf.value)
 				}
 
-				t.Logf("\t%d\t Testing adding to the start a node with next / prev set", i)
+				t.Logf("\t%d\t Testing adding a node to the start", i)
 				newFirst := NewDoublyLinkedListNode(-4)
-				newFirst.next = newFirst
-				newFirst.prev = newFirst
 
 				l.AddBefore(l.First(), newFirst)
 
@@ -299,8 +297,6 @@ func TestList(t *testing.T) {
 
 				t.Logf("\t%d\t Testing adding before second node", i)
 				newSecond := NewDoublyLinkedListNode(-3)
-				newSecond.next = newSecond
-				newSecond.prev = newSecond
 
 				l.AddBefore(l.First().Next(), newSecond)
 
@@ -334,8 +330,6 @@ func TestList(t *testing.T) {
 
 				t.Logf("\t%d\t Testing adding node before last", i)
 				newSecondLast := NewDoublyLinkedListNode(500000)
-				newSecondLast.next = newSecond
-				newSecondLast.prev = newSecond
 
 				l.AddBefore(l.Last(), newSecondLast)
 
