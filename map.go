@@ -10,15 +10,13 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-// load factor is a limit to the ratio between size and capacity
-// To avoid excessive locking complexity, the capacity will grow
-// if the loadfactor is reached and a put is called - regardless
-// of whether it creates a new key
-
 // The seed for the hashing function
 var seed = maphash.MakeSeed()
 
-const loadFactor int = 5 // the limit to the average list length
+// load factor is a limit to the ratio between size and capacity
+// a resize is triggered (in background routine) if the load factor is exceeded
+// to prevent the average list length growing too large
+const loadFactor int = 5
 
 // Generic hashmap with mutex and growth behaviour
 type Map[key comparable, val comparable] struct {

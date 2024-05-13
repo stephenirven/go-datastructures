@@ -69,6 +69,7 @@ func (h *Heap[val]) Size() int {
 	return len(h.slice)
 }
 
+// Moves the element from last position into correct heap location
 func (h *Heap[val]) bubbleUp() {
 
 	idx := len(h.slice) - 1
@@ -86,14 +87,14 @@ func (h *Heap[val]) bubbleUp() {
 	}
 }
 
+// Moves the element from first position into correct heap location
 func (h *Heap[val]) bubbleDown() {
 	idx := 0
 
 	childIdx, ok := h.bestChild(idx)
 
 	for ok {
-		cmp := h.compare(h.slice[idx], h.slice[childIdx])
-		if cmp > 0 {
+		if h.compare(h.slice[idx], h.slice[childIdx]) > 0 {
 			h.slice[idx], h.slice[childIdx] = h.slice[childIdx], h.slice[idx]
 			idx = childIdx
 			childIdx, ok = h.bestChild(idx)
@@ -115,6 +116,7 @@ func parent(idx int) (parentIdx int, ok bool) {
 	return
 }
 
+// finds the child index most likely to bubble up
 func (h *Heap[val]) bestChild(index int) (child int, ok bool) {
 	child1 := (2 * index) + 1
 	child2 := child1 + 1
