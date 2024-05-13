@@ -15,13 +15,13 @@ func TestSet(t *testing.T) {
 		source      []int // slice of ints to put in the source
 		uniqueCount int   // count of unique ints in the slice
 	}{
-		// {source: []int{1, 2, 3, 4, 5}, uniqueCount: 5},
-		// {source: []int{10, 24, 6, 24, 3, 2}, uniqueCount: 5},
-		// {source: []int{10}, uniqueCount: 1},
-		// {source: []int{}, uniqueCount: 0},
+		{source: []int{1, 2, 3, 4, 5}, uniqueCount: 5},
+		{source: []int{10, 24, 6, 24, 3, 2}, uniqueCount: 5},
+		{source: []int{10}, uniqueCount: 1},
+		{source: []int{}, uniqueCount: 0},
 		{source: []int{1, 2, 1, 2, 1, 1, 1}, uniqueCount: 2},
-		//{source: []int{1, 1, 1, 1, 1}, uniqueCount: 1},
-		//		{source: []int{1, 2, 3, 4, 5, 5}, uniqueCount: 5},
+		{source: []int{1, 1, 1, 1, 1}, uniqueCount: 1},
+		{source: []int{1, 2, 3, 4, 5, 5}, uniqueCount: 5},
 	}
 
 	t.Log("Given the need to test Set behaviour on sample data")
