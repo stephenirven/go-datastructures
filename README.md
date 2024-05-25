@@ -2,7 +2,7 @@
 
 A set of generic data structures with mutex locking.
 
-- DoublyLinkedList - generic doubly linked list implementation
+- List - generic doubly linked list implementation
 - Map - generic hashmap implementation
 - Set - generic set implementation
 - Heap - generic heap implementation
