@@ -3,12 +3,15 @@ package godatastructures
 import (
 	"math/rand"
 	"slices"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestList(t *testing.T) {
+var concurrency = 5000 // must be divisible by 4
+func TestLockingList(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -28,7 +31,7 @@ func TestList(t *testing.T) {
 
 				t.Logf("\t%d\t Testing empty list behaviour", i)
 
-				l := NewList[int]()
+				l := NewLList[int]()
 
 				v, ok := l.RemoveFirst()
 				if ok {
@@ -262,7 +265,7 @@ func TestList(t *testing.T) {
 				}
 
 				t.Logf("\t%d\t Testing adding a node to the start", i)
-				newFirst := NewNode(-4)
+				newFirst := NewLNode(-4)
 
 				l.AddBefore(l.First(), newFirst)
 
@@ -293,7 +296,7 @@ func TestList(t *testing.T) {
 				}
 
 				t.Logf("\t%d\t Testing adding before second node", i)
-				newSecond := NewNode(-3)
+				newSecond := NewLNode(-3)
 
 				l.AddBefore(l.First().Next(), newSecond)
 
@@ -326,7 +329,7 @@ func TestList(t *testing.T) {
 				}
 
 				t.Logf("\t%d\t Testing adding node before last", i)
-				newSecondLast := NewNode(500000)
+				newSecondLast := NewLNode(500000)
 
 				l.AddBefore(l.Last(), newSecondLast)
 
@@ -359,7 +362,7 @@ func TestList(t *testing.T) {
 				}
 
 				t.Logf("\t%d\t Testing adding after last node", i)
-				newLast := NewNode(10000000)
+				newLast := NewLNode(10000000)
 				newLast.next = newFirst
 				newLast.prev = newFirst
 
@@ -565,11 +568,11 @@ func TestList(t *testing.T) {
 	}
 }
 
-func TestListSingleItem(t *testing.T) {
+func TestLockingListSingleItem(t *testing.T) {
 
 	t.Log("Given the need to test Unlink on single item list")
 	{
-		l := NewList[int]()
+		l := NewLList[int]()
 		l.AddFirst(1)
 
 		l.Unlink(l.First())
@@ -588,4 +591,145 @@ func TestListSingleItem(t *testing.T) {
 
 	}
 
+}
+func TestListConcurrentFirstLast(t *testing.T) {
+	t.Parallel()
+	t.Log("Given the need to test concurrent add/remove first/last to the list")
+	{
+		l := NewLList[int]()
+
+		t.Logf("Testing AddFirst and AddLast with %d concurrent", concurrency)
+
+		wg := sync.WaitGroup{}
+		wg.Add(concurrency)
+		for i := range concurrency {
+			i := i // prevent loop capture - pre Go 1.22 feature
+			if i%2 == 0 {
+				go func() {
+					defer wg.Done()
+					l.AddFirst(i)
+				}()
+			} else {
+				go func() {
+					defer wg.Done()
+					l.AddLast(i)
+				}()
+			}
+		}
+		wg.Wait()
+
+		if l.Size() != concurrency {
+			t.Errorf("\t Size was expected to be %d : %v", concurrency, l.Size())
+		}
+
+		for i := range concurrency {
+			if !l.Contains(i) {
+				t.Errorf("Expected list to contain value: %v", i)
+			}
+		}
+
+		t.Logf("Testing AddFirst and AddLast with %d concurrent", concurrency)
+
+		t.Logf("Testing RemoveFirst and RemoveLast with %d concurrent", concurrency)
+		wg.Add(concurrency)
+		for i := range concurrency {
+			i := i // prevent capture
+			mod := i % 4
+			if mod == 0 {
+				go func() {
+					defer wg.Done()
+					l.RemoveFirst()
+				}()
+			} else if mod == 1 {
+				go func() {
+					defer wg.Done()
+					l.RemoveLast()
+				}()
+			} else if mod == 2 {
+				go func() {
+					defer wg.Done()
+					l.AddFirst(i)
+				}()
+			} else if mod == 3 {
+				go func() {
+					defer wg.Done()
+					l.AddLast(i)
+				}()
+			}
+		}
+		wg.Wait()
+
+		if l.Size() != concurrency {
+			t.Errorf("\t Size was expected to be 0 : %v", l.Size())
+		}
+
+	}
+}
+func TestListConcurrentBeforeAfter(t *testing.T) {
+	t.Parallel()
+	t.Log("Given the need to test concurrent add/remove before/after the first item in the list")
+	{
+		l := NewLList[int]()
+
+		l.AddFirst(100000) // single entry to allow AddBefore / AddAfter
+
+		t.Log("Testing AddBefore and AddAfter concurrently")
+		wg := sync.WaitGroup{}
+		wg.Add(concurrency)
+		for i := range concurrency {
+			i := i // prevent capture pre Go 1.22
+			if i%2 == 0 {
+				go func() {
+					defer wg.Done()
+					l.AddBefore(l.First(), NewLNode(i))
+
+				}()
+			} else {
+				go func() {
+					defer wg.Done()
+					l.AddAfter(l.First(), NewLNode(i))
+				}()
+			}
+		}
+		wg.Wait()
+
+		if l.Size() != concurrency+1 {
+			t.Errorf("\t Size was expected to be %d : %d", concurrency+1, l.Size())
+		}
+
+		t.Logf("Testing ToFirst / ToLast with %d concurrent", concurrency)
+
+		wg.Add(concurrency)
+		for i := range concurrency {
+			i := i // prevent capture
+			if i%2 == 0 {
+				go func() {
+					defer wg.Done()
+					time.Sleep(time.Duration(rand.Intn(concurrency)) * time.Microsecond) // random sleep to increase unpredictability
+					l.ToLast(l.First())
+				}()
+			} else {
+				go func() {
+					defer wg.Done()
+					time.Sleep(time.Duration(rand.Intn(concurrency)) * time.Microsecond)
+					l.ToFirst(l.Last())
+				}()
+			}
+		}
+		wg.Wait()
+
+		if l.Size() != concurrency+1 {
+			t.Errorf("\t Size was expected to be %d : %v", concurrency+1, l.Size())
+		}
+
+		for i := range concurrency {
+			if !l.Contains(i) {
+				t.Errorf("Expected list to contain value: %v", i)
+			}
+		}
+		if !l.Contains(100000) {
+			t.Errorf("Expected list to contain value: %v", 100000)
+		}
+
+	}
 }

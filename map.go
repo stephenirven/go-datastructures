@@ -20,7 +20,7 @@ const loadFactor int = 5
 
 // Generic hashmap with mutex and growth behaviour
 type Map[key comparable, val comparable] struct {
-	buckets  []List[*MapEntry[key, val]]
+	buckets  []LList[*MapEntry[key, val]]
 	capacity int
 	mutex    sync.RWMutex
 	resize   *semaphore.Weighted // Indicates resize in progress
@@ -31,7 +31,7 @@ type Map[key comparable, val comparable] struct {
 func NewMap[key comparable, val comparable](capacity int) *Map[key, val] {
 
 	m := Map[key, val]{
-		buckets:  make([]List[*MapEntry[key, val]], capacity),
+		buckets:  make([]LList[*MapEntry[key, val]], capacity),
 		capacity: capacity,
 		resize:   semaphore.NewWeighted(1),
 	}
@@ -158,7 +158,7 @@ func (m *Map[key, val]) Remove(k key) (ok bool) {
 func (m *Map[key, val]) Clear() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	m.buckets = make([]List[*MapEntry[key, val]], m.capacity)
+	m.buckets = make([]LList[*MapEntry[key, val]], m.capacity)
 	if unsafe.Sizeof(m.size) == 8 {
 		atomic.StoreInt64((*int64)(unsafe.Pointer(&m.size)), 0)
 	} else {
@@ -249,7 +249,7 @@ func (m *Map[key, val]) grow() {
 
 	newCapacity := newCapacity(m.capacity)
 
-	newBuckets := make([]List[*MapEntry[key, val]], newCapacity)
+	newBuckets := make([]LList[*MapEntry[key, val]], newCapacity)
 
 	// build a new set of populated buckets
 	for b := range m.buckets {

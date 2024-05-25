@@ -1,21 +1,25 @@
 package godatastructures
 
+import "sync"
+
 // Generic Doubly linked list
-type List[val comparable] struct {
+type LList[val comparable] struct {
 	size  int
-	first *Node[val]
-	last  *Node[val]
+	first *LNode[val]
+	last  *LNode[val]
+	mutex sync.RWMutex
 }
 
-type Node[val comparable] struct {
+type LNode[val comparable] struct {
 	value val
-	next  *Node[val]
-	prev  *Node[val]
+	next  *LNode[val]
+	prev  *LNode[val]
+	mutex sync.RWMutex
 }
 
 // constructor
-func NewNode[val comparable](v val) *Node[val] {
-	n := Node[val]{
+func NewLNode[val comparable](v val) *LNode[val] {
+	n := LNode[val]{
 		value: v,
 	}
 
@@ -23,7 +27,10 @@ func NewNode[val comparable](v val) *Node[val] {
 }
 
 // Get the next node or nil
-func (n *Node[val]) Next() *Node[val] {
+func (n *LNode[val]) Next() *LNode[val] {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
 	if n.next != nil {
 		return n.next
 	}
@@ -31,7 +38,10 @@ func (n *Node[val]) Next() *Node[val] {
 }
 
 // Get the previous node or nil
-func (n *Node[val]) Prev() *Node[val] {
+func (n *LNode[val]) Prev() *LNode[val] {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
 	if n.prev != nil {
 		return n.prev
 	}
@@ -39,49 +49,70 @@ func (n *Node[val]) Prev() *Node[val] {
 }
 
 // Get the value on the node
-func (n *Node[val]) Value() val {
+func (n *LNode[val]) Value() val {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
 	return n.value
 }
 
 // Set the value on the node
-func (n *Node[val]) SetValue(v val) {
+func (n *LNode[val]) SetValue(v val) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 	n.value = v
 }
 
 // constructor
-func NewList[val comparable]() *List[val] {
-	l := List[val]{}
+func NewLList[val comparable]() *LList[val] {
+	l := LList[val]{}
 	return &l
 }
 
 // Get first node or nil
-func (l *List[val]) First() *Node[val] {
+func (l *LList[val]) First() *LNode[val] {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 	return l.first
 }
 
 // Get last node or nil
-func (l *List[val]) Last() *Node[val] {
+func (l *LList[val]) Last() *LNode[val] {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 	return l.last
 }
 
 // Get the size of the list
-func (l *List[val]) Size() int {
+func (l *LList[val]) Size() int {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 	return l.size
 }
 
 // Remove all nodes from the list
-func (l *List[val]) Clear() {
+func (l *LList[val]) Clear() {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	l.size = 0
 	l.first = nil
 	l.last = nil
 }
 
 // Adds a new value at the start of the list
-func (l *List[val]) AddFirst(v val) {
+func (l *LList[val]) AddFirst(v val) {
 
-	n := NewNode(v)
+	// Lock the whole list mutex, as we are modifying list.first
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	n := NewLNode(v)
 	n.next = l.first
 	if l.first != nil {
+
+		// Lock the mutex on the first node, as we are going to
+		// modify its prev value
+		l.first.mutex.Lock()
+		defer l.first.mutex.Unlock()
 
 		l.first.prev = n
 		l.first = n
@@ -97,14 +128,28 @@ func (l *List[val]) AddFirst(v val) {
 
 // Remove and return the value at the start of the list
 // boolean ok indicates the presence of a value
-func (l *List[val]) RemoveFirst() (v val, ok bool) {
+func (l *LList[val]) RemoveFirst() (v val, ok bool) {
+
+	// Lock the whole list mutex, as we are modifying list.first
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
 	if l.first != nil {
+
+		// Lock the mutex on the first node, as we are going to
+		// remove it
+		l.first.mutex.Lock()
+		defer l.first.mutex.Unlock()
 
 		ok = true         // we found a node
 		v = l.first.value // value to return
 
 		if l.first.next != nil {
+			// Lock the next node, as we need to modify its
+			// prev value to nil
+			l.first.next.mutex.Lock()
+			defer l.first.next.mutex.Unlock()
+
 			// set the list.first to the next node
 			l.first = l.first.next
 
@@ -129,9 +174,14 @@ func (l *List[val]) RemoveFirst() (v val, ok bool) {
 
 // Return the value at the start of the list
 // boolean ok indicates the presence of a value
-func (l *List[val]) PeekFirst() (v val, ok bool) {
+func (l *LList[val]) PeekFirst() (v val, ok bool) {
 
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 	if l.first != nil {
+		l.first.mutex.RLock()
+		defer l.first.mutex.RUnlock()
+
 		v = l.first.value
 		ok = true
 		return
@@ -144,11 +194,20 @@ func (l *List[val]) PeekFirst() (v val, ok bool) {
 // End of list funcs
 
 // Add a new value at the end of the list
-func (l *List[val]) AddLast(v val) {
+func (l *LList[val]) AddLast(v val) {
 
-	n := NewNode(v)
+	// Lock the whole list mutex, as we are modifying list.last
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	n := NewLNode(v)
 	n.prev = l.last
 	if l.last != nil {
+
+		// Lock the mutex on the last node, as we are going to
+		// modify its next value
+		l.last.mutex.Lock()
+		defer l.last.mutex.Unlock()
 
 		l.last.next = n
 		l.last = n
@@ -163,14 +222,27 @@ func (l *List[val]) AddLast(v val) {
 
 // Remove and returns the value at the end of the list
 // boolean ok indicates the presence of a value
-func (l *List[val]) RemoveLast() (v val, ok bool) {
+func (l *LList[val]) RemoveLast() (v val, ok bool) {
+
+	// Lock the whole list mutex, as we are modifying list.last
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
 	if l.last != nil {
+
+		// Lock the mutex on the last node, as we are going to
+		// remove it
+		l.last.mutex.Lock()
+		defer l.last.mutex.Unlock()
 
 		ok = true        // we found a node
 		v = l.last.value // value to return
 
 		if l.last.prev != nil {
+			// Lock the prev node, as we need to modify its
+			// next value to nil
+			l.last.prev.mutex.Lock()
+			defer l.last.prev.mutex.Unlock()
 
 			// set the list.last to the prev node
 			l.last = l.last.prev
@@ -195,8 +267,13 @@ func (l *List[val]) RemoveLast() (v val, ok bool) {
 
 // Return the value at the end of the list
 // boolean ok indicates the presence of a value
-func (l *List[val]) PeekLast() (v val, ok bool) {
+func (l *LList[val]) PeekLast() (v val, ok bool) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 	if l.last != nil {
+		l.last.mutex.RLock()
+		defer l.last.mutex.RUnlock()
+
 		v = l.last.value
 		ok = true
 		return
@@ -210,13 +287,23 @@ func (l *List[val]) PeekLast() (v val, ok bool) {
 // Arbitary position functions
 
 // Add a new node after an existing node in the list
-func (l *List[val]) AddAfter(existingNode *Node[val], newNode *Node[val]) {
+func (l *LList[val]) AddAfter(existingNode *LNode[val], newNode *LNode[val]) {
 	if existingNode == nil {
 		return
 	}
+
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	existingNode.mutex.Lock()
+	defer existingNode.mutex.Unlock()
+	newNode.mutex.Lock()
+	defer newNode.mutex.Unlock()
+
 	next := existingNode.next
 
 	if next != nil {
+		next.mutex.Lock()
+		defer next.mutex.Unlock()
 		next.prev = newNode
 	} else {
 		l.last = newNode
@@ -231,14 +318,25 @@ func (l *List[val]) AddAfter(existingNode *Node[val], newNode *Node[val]) {
 }
 
 // Add a new node before an existing node in the list
-func (l *List[val]) AddBefore(existingNode *Node[val], newNode *Node[val]) {
+func (l *LList[val]) AddBefore(existingNode *LNode[val], newNode *LNode[val]) {
 	if existingNode == nil {
 		return
 	}
 
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	existingNode.mutex.Lock()
+	defer existingNode.mutex.Unlock()
+
+	newNode.mutex.Lock()
+	defer newNode.mutex.Unlock()
+
 	prev := existingNode.prev
 
 	if prev != nil {
+		prev.mutex.Lock()
+		defer prev.mutex.Unlock()
 		prev.next = newNode
 	}
 
@@ -254,7 +352,9 @@ func (l *List[val]) AddBefore(existingNode *Node[val], newNode *Node[val]) {
 }
 
 // Determine whether a value is in the list
-func (l *List[val]) Contains(v val) bool {
+func (l *LList[val]) Contains(v val) bool {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
 	for curr := l.first; curr != nil; curr = curr.next {
 		if curr.value == v {
@@ -266,7 +366,9 @@ func (l *List[val]) Contains(v val) bool {
 
 // Find the first node that contains the specified value
 // boolean ok indicates the presence of a value
-func (l *List[val]) FindFirst(v val) (node *Node[val], ok bool) {
+func (l *LList[val]) FindFirst(v val) (node *LNode[val], ok bool) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
 	for curr := l.first; curr != nil; curr = curr.next {
 		if curr.value == v {
@@ -278,7 +380,9 @@ func (l *List[val]) FindFirst(v val) (node *Node[val], ok bool) {
 
 // Find the last node that contains the specified value
 // boolean ok indicates the presence of a value
-func (l *List[val]) FindLast(v val) (node *Node[val], ok bool) {
+func (l *LList[val]) FindLast(v val) (node *LNode[val], ok bool) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
 	for curr := l.last; curr != nil; curr = curr.prev {
 		if curr.value == v {
@@ -290,7 +394,9 @@ func (l *List[val]) FindLast(v val) (node *Node[val], ok bool) {
 
 // Find the first node that matches the predicate
 // boolean ok indicates the presence of a value
-func (l *List[val]) FindFirstFunc(predicate func(v val) bool) (node *Node[val], ok bool) {
+func (l *LList[val]) FindFirstFunc(predicate func(v val) bool) (node *LNode[val], ok bool) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
 	for curr := l.first; curr != nil; curr = curr.next {
 		if predicate(curr.value) {
@@ -302,7 +408,9 @@ func (l *List[val]) FindFirstFunc(predicate func(v val) bool) (node *Node[val], 
 
 // Find the last node that matches the predicate
 // boolean ok indicates the presence of a value
-func (l *List[val]) FindLastFunc(predicate func(v val) bool) (node *Node[val], ok bool) {
+func (l *LList[val]) FindLastFunc(predicate func(v val) bool) (node *LNode[val], ok bool) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
 	for curr := l.last; curr != nil; curr = curr.prev {
 		if predicate(curr.value) {
@@ -313,7 +421,11 @@ func (l *List[val]) FindLastFunc(predicate func(v val) bool) (node *Node[val], o
 }
 
 // Disconnect the node from the list
-func (l *List[val]) Unlink(n *Node[val]) {
+func (l *LList[val]) Unlink(n *LNode[val]) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 
 	if l.first == n { // if the node is the first
 		l.first = n.next // set the first to be the next
@@ -324,9 +436,13 @@ func (l *List[val]) Unlink(n *Node[val]) {
 	}
 
 	if n.next != nil {
+		n.next.mutex.Lock()
+		defer n.next.mutex.Unlock()
 		n.next.prev = n.prev
 	}
 	if n.prev != nil {
+		n.prev.mutex.Lock()
+		defer n.prev.mutex.Unlock()
 		n.prev.next = n.next
 	}
 
@@ -338,9 +454,23 @@ func (l *List[val]) Unlink(n *Node[val]) {
 }
 
 // Move the node to the first position of the list
-func (l *List[val]) ToFirst(n *Node[val]) {
+func (l *LList[val]) ToFirst(n *LNode[val]) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
 	if n == l.first {
 		return
+	}
+
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	if n.prev != nil {
+		n.prev.mutex.Lock()
+		defer n.prev.mutex.Unlock()
+	}
+	if n.next != nil {
+		n.next.mutex.Lock()
+		defer n.next.mutex.Unlock()
 	}
 
 	if n == l.last {
@@ -362,10 +492,21 @@ func (l *List[val]) ToFirst(n *Node[val]) {
 }
 
 // Move the node to the last position of the list
-func (l *List[val]) ToLast(n *Node[val]) {
+func (l *LList[val]) ToLast(n *LNode[val]) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
 	if n == l.last {
 		return
+	}
+
+	if n.prev != nil {
+		n.prev.mutex.Lock()
+		defer n.prev.mutex.Unlock()
+	}
+	if n.next != nil {
+		n.next.mutex.Lock()
+		defer n.next.mutex.Unlock()
 	}
 
 	if n == l.first {
@@ -386,7 +527,9 @@ func (l *List[val]) ToLast(n *Node[val]) {
 }
 
 // Return a slice of the list values
-func (l *List[val]) Slice() (slice []val) {
+func (l *LList[val]) Slice() (slice []val) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
 	slice = make([]val, l.size)
 	idx := 0
@@ -399,7 +542,9 @@ func (l *List[val]) Slice() (slice []val) {
 }
 
 // Replace the list values with those from the slice
-func (l *List[val]) FromSlice(slice []val) {
+func (l *LList[val]) FromSlice(slice []val) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
 	l.first = nil
 	l.last = nil
@@ -407,10 +552,10 @@ func (l *List[val]) FromSlice(slice []val) {
 	if len(slice) == 0 {
 		return
 	}
-	n := NewNode(slice[0])
+	n := NewLNode(slice[0])
 	l.first = n
 	for _, v := range slice[1:] {
-		n.next = NewNode(v)
+		n.next = NewLNode(v)
 		n.next.prev = n
 		n = n.next
 	}
@@ -418,7 +563,9 @@ func (l *List[val]) FromSlice(slice []val) {
 }
 
 // Return a slice of the list values in reverse order
-func (l *List[val]) ReverseSlice() (slice []val) {
+func (l *LList[val]) ReverseSlice() (slice []val) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
 	slice = make([]val, l.size)
 	idx := 0
@@ -432,7 +579,9 @@ func (l *List[val]) ReverseSlice() (slice []val) {
 
 // Apply the provided function to each node in the list
 // function must NOT modify the list when used with concurrency
-func (l *List[val]) Do(f func(v val)) {
+func (l *LList[val]) Do(f func(v val)) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
 	for curr := l.first; curr != nil; curr = curr.next {
 		f(curr.value)
@@ -441,7 +590,9 @@ func (l *List[val]) Do(f func(v val)) {
 
 // Apply the provided function to each node on the list in reverse
 // function must NOT modify the list when used with concurrency
-func (l *List[val]) DoReverse(f func(v val)) {
+func (l *LList[val]) DoReverse(f func(v val)) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
 	for curr := l.last; curr != nil; curr = curr.prev {
 		f(curr.value)
