@@ -31,7 +31,7 @@ func TestList(t *testing.T) {
 
 				t.Logf("\t%d\t Testing empty list behaviour", i)
 
-				l := NewDoublyLinkedList[int]()
+				l := NewList[int]()
 
 				v, ok := l.RemoveFirst()
 				if ok {
@@ -265,7 +265,7 @@ func TestList(t *testing.T) {
 				}
 
 				t.Logf("\t%d\t Testing adding a node to the start", i)
-				newFirst := NewDoublyLinkedListNode(-4)
+				newFirst := NewNode(-4)
 
 				l.AddBefore(l.First(), newFirst)
 
@@ -296,7 +296,7 @@ func TestList(t *testing.T) {
 				}
 
 				t.Logf("\t%d\t Testing adding before second node", i)
-				newSecond := NewDoublyLinkedListNode(-3)
+				newSecond := NewNode(-3)
 
 				l.AddBefore(l.First().Next(), newSecond)
 
@@ -329,7 +329,7 @@ func TestList(t *testing.T) {
 				}
 
 				t.Logf("\t%d\t Testing adding node before last", i)
-				newSecondLast := NewDoublyLinkedListNode(500000)
+				newSecondLast := NewNode(500000)
 
 				l.AddBefore(l.Last(), newSecondLast)
 
@@ -362,7 +362,7 @@ func TestList(t *testing.T) {
 				}
 
 				t.Logf("\t%d\t Testing adding after last node", i)
-				newLast := NewDoublyLinkedListNode(10000000)
+				newLast := NewNode(10000000)
 				newLast.next = newFirst
 				newLast.prev = newFirst
 
@@ -572,7 +572,7 @@ func TestListSingleItem(t *testing.T) {
 
 	t.Log("Given the need to test Unlink on single item list")
 	{
-		l := NewDoublyLinkedList[int]()
+		l := NewList[int]()
 		l.AddFirst(1)
 
 		l.Unlink(l.First())
@@ -596,7 +596,7 @@ func TestListConcurrentFirstLast(t *testing.T) {
 	t.Parallel()
 	t.Log("Given the need to test concurrent add/remove first/last to the list")
 	{
-		l := NewDoublyLinkedList[int]()
+		l := NewList[int]()
 
 		t.Logf("Testing AddFirst and AddLast with %d concurrent", concurrency)
 
@@ -669,7 +669,7 @@ func TestListConcurrentBeforeAfter(t *testing.T) {
 	t.Parallel()
 	t.Log("Given the need to test concurrent add/remove before/after the first item in the list")
 	{
-		l := NewDoublyLinkedList[int]()
+		l := NewList[int]()
 
 		l.AddFirst(100000) // single entry to allow AddBefore / AddAfter
 
@@ -681,13 +681,13 @@ func TestListConcurrentBeforeAfter(t *testing.T) {
 			if i%2 == 0 {
 				go func() {
 					defer wg.Done()
-					l.AddBefore(l.First(), NewDoublyLinkedListNode(i))
+					l.AddBefore(l.First(), NewNode(i))
 
 				}()
 			} else {
 				go func() {
 					defer wg.Done()
-					l.AddAfter(l.First(), NewDoublyLinkedListNode(i))
+					l.AddAfter(l.First(), NewNode(i))
 				}()
 			}
 		}

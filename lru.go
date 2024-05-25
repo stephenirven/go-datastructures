@@ -13,8 +13,8 @@ type CacheEntry[key comparable, val any] struct {
 type LRUCache[key comparable, val any] struct {
 	mutex    sync.RWMutex
 	capacity int
-	values   *Map[key, *DoublyLinkedListNode[*CacheEntry[key, val]]]
-	list     *DoublyLinkedList[*CacheEntry[key, val]]
+	values   *Map[key, *Node[*CacheEntry[key, val]]]
+	list     *List[*CacheEntry[key, val]]
 }
 
 func NewLRUCache[key comparable, val any](cap int) (cache *LRUCache[key, val], ok bool) {
@@ -26,8 +26,8 @@ func NewLRUCache[key comparable, val any](cap int) (cache *LRUCache[key, val], o
 	cache = &LRUCache[key, val]{
 		mutex:    sync.RWMutex{},
 		capacity: cap,
-		values:   NewMap[key, *DoublyLinkedListNode[*CacheEntry[key, val]]](1),
-		list:     NewDoublyLinkedList[*CacheEntry[key, val]](),
+		values:   NewMap[key, *Node[*CacheEntry[key, val]]](1),
+		list:     NewList[*CacheEntry[key, val]](),
 	}
 	return cache, true
 }
