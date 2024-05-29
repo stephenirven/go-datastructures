@@ -150,13 +150,8 @@ func (l *LList[val]) RemoveFirst() (v val, ok bool) {
 			l.first.next.mutex.Lock()
 			defer l.first.next.mutex.Unlock()
 
-			// set the list.first to the next node
 			l.first = l.first.next
-
-			// remove the prev node from the first
 			l.first.prev = nil
-
-			// amend the size
 			l.size--
 		} else {
 			// we removed all nodes
@@ -235,8 +230,8 @@ func (l *LList[val]) RemoveLast() (v val, ok bool) {
 		l.last.mutex.Lock()
 		defer l.last.mutex.Unlock()
 
-		ok = true        // we found a node
-		v = l.last.value // value to return
+		ok = true
+		v = l.last.value
 
 		if l.last.prev != nil {
 			// Lock the prev node, as we need to modify its
@@ -244,13 +239,8 @@ func (l *LList[val]) RemoveLast() (v val, ok bool) {
 			l.last.prev.mutex.Lock()
 			defer l.last.prev.mutex.Unlock()
 
-			// set the list.last to the prev node
 			l.last = l.last.prev
-
-			// remove the next node from the last
 			l.last.next = nil
-
-			// amend the size
 			l.size--
 		} else {
 			// we removed all nodes
@@ -427,12 +417,12 @@ func (l *LList[val]) Unlink(n *LNode[val]) {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
-	if l.first == n { // if the node is the first
-		l.first = n.next // set the first to be the next
+	if l.first == n {
+		l.first = n.next
 	}
 
-	if l.last == n { // if the node is the last
-		l.last = n.prev // set the last to be the prev
+	if l.last == n {
+		l.last = n.prev
 	}
 
 	if n.next != nil {
@@ -448,8 +438,6 @@ func (l *LList[val]) Unlink(n *LNode[val]) {
 
 	n.next = nil
 	n.prev = nil
-
-	// reduce length
 	l.size--
 }
 

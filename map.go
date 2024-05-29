@@ -63,22 +63,19 @@ func (m *Map[key, val]) Get(k key) (value val, ok bool) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
-	// generate the numeric index within the backing slice
 	idx := hash(k, m.capacity)
 
-	// read lock the bucket while searching
 	m.buckets[idx].mutex.RLock()
 	defer m.buckets[idx].mutex.RUnlock()
 
-	// search the list, starting with the most recently added
 	entry, ok := m.buckets[idx].FindFirstFunc(func(v *MapEntry[key, val]) bool {
 		return v.key == k
 	})
-	if ok { // item was found
+	if ok {
 		value = entry.value.value
 		return
 	}
-	ok = false // item was not found
+	ok = false
 	return
 
 }
@@ -86,21 +83,17 @@ func (m *Map[key, val]) Get(k key) (value val, ok bool) {
 // Associates the specified value with the specified key in this map.
 func (m *Map[key, val]) Put(k key, v val) {
 
-	// read lock while we search
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
-	// If we need a resize and one isn't already in progress, set it running
 	if (m.Size() / m.capacity) > loadFactor {
 		if m.resize.TryAcquire(1) {
 			go m.grow()
 		}
 	}
 
-	// get the numeric index
 	idx := hash(k, m.capacity)
 
-	// Search for the key, starting with the most recently added
 	entry, ok := m.buckets[idx].FindFirstFunc(func(v *MapEntry[key, val]) bool {
 		return v.key == k
 	})
@@ -130,14 +123,11 @@ func (m *Map[key, val]) PutAll(entries []MapEntry[key, val]) {
 // Removes the mapping for the specified key from this map if present.
 func (m *Map[key, val]) Remove(k key) (ok bool) {
 
-	// read lock while we search
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
-	// get the numeric index
 	idx := hash(k, m.capacity)
 
-	// Search for the key, starting with the most recently added
 	entry, ok := m.buckets[idx].FindFirstFunc(func(v *MapEntry[key, val]) bool {
 		return v.key == k
 	})
@@ -171,14 +161,12 @@ func (m *Map[key, val]) Clear() {
 
 // Returns true if this map contains a mapping for the specified key
 func (m *Map[key, val]) ContainsKey(k key) (ok bool) {
-	// read lock while we search
+
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
-	// get the numeric index
 	idx := hash(k, m.capacity)
 
-	// Search for the key, starting with the most recently added
 	_, ok = m.buckets[idx].FindFirstFunc(func(v *MapEntry[key, val]) bool {
 		return v.key == k
 	})
@@ -239,19 +227,17 @@ func (m *Map[key, val]) Values() (values []val) {
 func (m *Map[key, val]) grow() {
 	defer m.resize.Release(1) // release the semaphor when done, to allow grow to run again
 
-	// We need a lock on this to prevent access during resize
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
 	if (m.size / m.capacity) < loadFactor {
-		return // drop out if we don't need to resize
+		return
 	}
 
 	newCapacity := newCapacity(m.capacity)
 
 	newBuckets := make([]LList[*MapEntry[key, val]], newCapacity)
 
-	// build a new set of populated buckets
 	for b := range m.buckets {
 		m.buckets[b].Do(func(e *MapEntry[key, val]) {
 			idx := hash(e.key, newCapacity)

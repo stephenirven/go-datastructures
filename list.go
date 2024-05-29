@@ -101,17 +101,13 @@ func (l *List[val]) RemoveFirst() (v val, ok bool) {
 
 	if l.first != nil {
 
-		ok = true         // we found a node
-		v = l.first.value // value to return
+		ok = true
+		v = l.first.value
 
 		if l.first.next != nil {
-			// set the list.first to the next node
+
 			l.first = l.first.next
-
-			// remove the prev node from the first
 			l.first.prev = nil
-
-			// amend the size
 			l.size--
 		} else {
 			// we removed all nodes
@@ -167,18 +163,13 @@ func (l *List[val]) RemoveLast() (v val, ok bool) {
 
 	if l.last != nil {
 
-		ok = true        // we found a node
-		v = l.last.value // value to return
+		ok = true
+		v = l.last.value
 
 		if l.last.prev != nil {
 
-			// set the list.last to the prev node
 			l.last = l.last.prev
-
-			// remove the next node from the last
 			l.last.next = nil
-
-			// amend the size
 			l.size--
 		} else {
 			// we removed all nodes
@@ -206,8 +197,6 @@ func (l *List[val]) PeekLast() (v val, ok bool) {
 	return
 
 }
-
-// Arbitary position functions
 
 // Add a new node after an existing node in the list
 func (l *List[val]) AddAfter(existingNode *Node[val], newNode *Node[val]) {
@@ -333,7 +322,6 @@ func (l *List[val]) Unlink(n *Node[val]) {
 	n.next = nil
 	n.prev = nil
 
-	// reduce length
 	l.size--
 }
 
